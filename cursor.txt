@@ -1,496 +1,158 @@
-## 6. Mapper 接口与 XML 映射文件（详细说明）
+使用 Cursor 开发“电商订单管理系统”时所需的所有代码文件清单（按开发顺序排列） 
+> 注：仅列出文件名与职责，不包含具体代码实现。
+## 一、项目功能总结（电商订单管理系统）
+### 核心业务模块（4个，满足增、删、改、条件查询、分页查询）
+| 模块 | 功能说明 | 包含操作 |
+|------|----------|----------|
+| 商品管理 | 维护商品信息 | 增加商品、删除商品、修改商品、按名称/分类/价格区间条件查询、分页查询 |
+| 订单管理 | 用户下单、订单状态流转 | 创建订单、取消订单、修改订单状态、按订单号/状态/时间范围查询、分页查询 |
+| 用户管理 | 用户注册及信息维护 | 新增用户、删除用户、修改用户信息、按用户名/手机号/邮箱条件查询、分页查询 |
+| 购物车管理 | 暂存用户选购的商品 | 添加商品到购物车、删除购物车项、修改数量、清空购物车、查询当前用户购物车列表（分页） |
+### 满足实验要求的其他关键特性
+- 多表关联查询（MyBatis）  
+  - 一对一：查询用户及其扩展信息（`user` + `user_profile`）  
+  - 一对多：查询用户及其所有订单（`user` + `order`）  
+  - 多对多：查询订单及其包含的所有商品（`order` ↔ `product` 通过 `order_item`）
+- Redis 缓存应用  
+  - 商品热点数据缓存（商品详情、商品列表分页）  
+  - 用户登录令牌（JWT + Redis 黑名单/白名单）  
+  - 避免缓存穿透/击穿（布隆过滤器或空值缓存）
+- Service 层复杂逻辑（至少包含两项）  
+  - 声明式事务管理（下单时扣减库存、创建订单、清空购物车）  
+  - 业务校验（库存是否充足、订单状态流转合法性、用户权限）  
+  - VO 封装（返回给前端的对象不是 Entity）  
+  - 缓存逻辑（先查 Redis，未命中再查 DB 并回写）
 
-MyBatis 的核心在于将 **Mapper 接口**（Java 方法）与 **XML 映射文件**（SQL 语句）绑定，实现数据访问。以下结合“电商订单管理系统”的实际需求，详细讲解：
-
-- 基本单表 CRUD 操作  
-- **一对一**（用户 ↔ 用户扩展信息）  
-- **一对多**（用户 ↔ 订单）  
-- **多对多**（订单 ↔ 商品，通过中间表）  
-- 以及复杂查询（条件分页、动态 SQL）的完整实现。
-
----
-
-### 6.1 Mapper 接口与 XML 的映射规则
-
-| 要素 | 规则说明 |
-|------|----------|
-| 接口包路径 | `com.example.ecomorder.mapper` |
-| XML 存放位置 | `src/main/resources/mapper/` |
-| XML 命名空间 | 必须等于 Mapper 接口的全限定名，例如：`com.example.ecomorder.mapper.UserMapper` |
-| 方法名与 SQL id | 必须一致 |
-| 参数传递 | 单个参数直接用 `#{param}`；多个参数需用 `@Param("xxx")` 注解或在 XML 中使用 `arg0`，但推荐 `@Param` |
-
----
-
-### 6.2 单表 CRUD 操作（以 ProductMapper 为例）
-
-#### 6.2.1 Mapper 接口定义
-
-```java
-package com.example.ecomorder.mapper;
-
-import com.example.ecomorder.entity.Product;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import java.math.BigDecimal;
-import java.util.List;
-
-@Mapper
-public interface ProductMapper {
-
-    // 插入商品（返回自增主键自动回填到 Product.id）
-    int insert(Product product);
-
-    // 根据主键更新
-    int updateById(Product product);
-
-    // 根据主键删除（物理删除）
-    int deleteById(@Param("id") Long id);
-
-    // 根据主键查询
-    Product selectById(@Param("id") Long id);
-
-    // 条件查询（名称模糊、分类、价格区间）用于分页
-    List<Product> selectByCondition(@Param("name") String name,
-                                    @Param("category") String category,
-                                    @Param("minPrice") BigDecimal minPrice,
-                                    @Param("offset") int offset,
-                                    @Param("limit") int limit);
-
-    // 条件查询总记录数（用于分页）
-    long countByCondition(@Param("name") String name,
-                          @Param("category") String category,
-                          @Param("minPrice") BigDecimal minPrice);
-}
+## 二、按开发顺序列出所有需要的代码文件
+> 开发顺序遵循：环境配置 → 实体层(Entity) → 数据访问层(Mapper/XML) → 业务层(Service) → 控制层(Controller) → 视图对象(VO/Util) → 前端页面与组件 → 测试与配置完善
+### 1. 后端项目结构与配置文件
 ```
-
-#### 6.2.2 XML 映射文件（ProductMapper.xml）
-
-```xml
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.ecomorder.mapper.ProductMapper">
-
-    <!-- 结果映射：将数据库列名与实体属性对应（下划线转驼峰已开启，但显式写出更清晰） -->
-    <resultMap id="BaseResultMap" type="com.example.ecomorder.entity.Product">
-        <id column="id" property="id"/>
-        <result column="name" property="name"/>
-        <result column="price" property="price"/>
-        <result column="stock" property="stock"/>
-        <result column="category" property="category"/>
-        <result column="status" property="status"/>
-    </resultMap>
-
-    <!-- 插入：使用自增主键 -->
-    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO product (name, price, stock, category, status)
-        VALUES (#{name}, #{price}, #{stock}, #{category}, #{status})
-    </insert>
-
-    <!-- 更新 -->
-    <update id="updateById">
-        UPDATE product
-        SET name = #{name},
-            price = #{price},
-            stock = #{stock},
-            category = #{category},
-            status = #{status}
-        WHERE id = #{id}
-    </update>
-
-    <!-- 删除 -->
-    <delete id="deleteById">
-        DELETE FROM product WHERE id = #{id}
-    </delete>
-
-    <!-- 根据主键查询 -->
-    <select id="selectById" resultMap="BaseResultMap">
-        SELECT id, name, price, stock, category, status
-        FROM product
-        WHERE id = #{id}
-    </select>
-
-    <!-- 条件分页查询（动态 SQL） -->
-    <select id="selectByCondition" resultMap="BaseResultMap">
-        SELECT id, name, price, stock, category, status
-        FROM product
-        <where>
-            <if test="name != null and name != ''">
-                AND name LIKE CONCAT('%', #{name}, '%')
-            </if>
-            <if test="category != null and category != ''">
-                AND category = #{category}
-            </if>
-            <if test="minPrice != null">
-                AND price >= #{minPrice}
-            </if>
-        </where>
-        ORDER BY id DESC
-        LIMIT #{offset}, #{limit}
-    </select>
-
-    <!-- 条件统计 -->
-    <select id="countByCondition" resultType="long">
-        SELECT COUNT(*)
-        FROM product
-        <where>
-            <if test="name != null and name != ''">
-                AND name LIKE CONCAT('%', #{name}, '%')
-            </if>
-            <if test="category != null and category != ''">
-                AND category = #{category}
-            </if>
-            <if test="minPrice != null">
-                AND price >= #{minPrice}
-            </if>
-        </where>
-    </select>
-
-</mapper>
+src/main/java/com.example.javaee_ecomorder /
+│
+├── EcomApplication.java               # SpringBoot 启动类
+│
+└── config/                            # 配置类
+    ├── RedisConfig.java               # Redis 配置（序列化、连接工厂）
+    ├── WebMvcConfig.java              # 跨域配置、拦截器注册
+    ├── MybatisPlusConfig.java         # MyBatis 分页插件配置
+    └── SwaggerConfig.java             # API 文档（可选，便于测试）
 ```
-
-> **注意**：`useGeneratedKeys="true"` 和 `keyProperty="id"` 会令自增 id 自动回填到传入的 Product 对象中。
-
----
-
-### 6.3 一对一关联查询（User ↔ UserProfile）
-
-**业务场景**：查询用户基本信息的同时，获取其扩展信息（真实姓名、地址、积分）。
-
-#### 6.3.1 VO 类（视图对象）
-
-```java
-package com.example.ecomorder.vo;
-
-import lombok.Data;
-
-@Data
-public class UserWithProfileVO {
-    private Long id;
-    private String username;
-    private String email;
-    private String phone;
-    private String realName;   // 来自 user_profile
-    private String address;
-    private Integer points;
-}
 ```
-
-#### 6.3.2 Mapper 接口
-
-```java
-public interface UserMapper {
-    // 一对一查询：用户及其扩展信息
-    UserWithProfileVO selectUserWithProfile(@Param("userId") Long userId);
-}
+src/main/resources/
+│
+├── application. properties              # 主配置文件（数据库、Redis、日志）
+├── application-dev.yml                # 开发环境配置
+└── db/                                # 数据库脚本
+    └── data.sql                       # 初始测试数据
 ```
-
-#### 6.3.3 XML 映射（使用 resultType 直接映射）
-
-```xml
-<mapper namespace="com.example.ecomorder.mapper.UserMapper">
-
-    <!-- 一对一查询（左连接，字段别名与 VO 属性对应） -->
-    <select id="selectUserWithProfile" resultType="com.example.ecomorder.vo.UserWithProfileVO">
-        SELECT u.id,
-               u.username,
-               u.email,
-               u.phone,
-               up.real_name   AS realName,
-               up.address,
-               up.points
-        FROM user u
-        LEFT JOIN user_profile up ON u.id = up.user_id
-        WHERE u.id = #{userId}
-    </select>
-
-</mapper>
+### 2. 实体层（Entity） – 对应数据库表
 ```
-
-> **说明**：由于 VO 属性名（realName）与数据库列（real_name）不一致，使用 `AS` 别名映射。也可以定义 `resultMap` 使用 `association` 标签，但简单一对一直接用别名更简洁。
-
-**如果需要使用 `association` 方式（更规范）**：
-
-```xml
-<resultMap id="UserWithProfileMap" type="com.example.ecomorder.vo.UserWithProfileVO">
-    <id column="id" property="id"/>
-    <result column="username" property="username"/>
-    <result column="email" property="email"/>
-    <result column="phone" property="phone"/>
-    <!-- 使用 association 嵌套另一个对象 -->
-    <association property="profile" javaType="com.example.ecomorder.entity.UserProfile">
-        <result column="real_name" property="realName"/>
-        <result column="address" property="address"/>
-        <result column="points" property="points"/>
-    </association>
-</resultMap>
-
-<select id="selectUserWithProfile" resultMap="UserWithProfileMap">
-    SELECT u.id, u.username, u.email, u.phone,
-           up.real_name, up.address, up.points
-    FROM user u
-    LEFT JOIN user_profile up ON u.id = up.user_id
-    WHERE u.id = #{userId}
-</select>
+src/main/java/com.example.javaee_ecomorder/entity/
+│
+├── User.java                          # 用户表
+├── UserProfile.java                   # 用户扩展信息表（一对一）
+├── Product.java                       # 商品表
+├── Order.java                         # 订单表
+└── OrderItem.java                     # 订单商品明细表（多对多关联表）
+└── Cart.java
 ```
-
-此时 VO 需要包含 `private UserProfile profile;` 属性。两种方式均可，推荐第一种（简单场景）。
-
----
-
-### 6.4 一对多关联查询（User ↔ Order）
-
-**业务场景**：查询一个用户及其下的所有订单。
-
-#### 6.4.1 VO 类
-
-```java
-@Data
-public class UserWithOrdersVO {
-    private Long userId;
-    private String username;
-    private List<OrderVO> orders;   // 一对多，订单列表
-}
-
-@Data
-public class OrderVO {
-    private Long orderId;
-    private String orderNo;
-    private BigDecimal totalPrice;
-    private Integer status;
-    private Date createTime;
-}
+### 3. Mapper 层（数据访问）
 ```
-
-#### 6.4.2 Mapper 接口
-
-```java
-public interface UserMapper {
-    UserWithOrdersVO selectUserWithOrders(@Param("userId") Long userId);
-}
+src/main/java/com.example.javaee_ecomorder/mapper/
+│
+├── UserMapper.java                    # 用户表 CRUD + 一对一关联查询
+├── UserProfileMapper.java             # 扩展信息表
+├── ProductMapper.java                 # 商品表 CRUD + 条件分页
+├── OrderMapper.java                   # 订单表 + 一对多（用户→订单）
+├── OrderItemMapper.java               # 订单明细 + 多对多（订单→商品）
+└── CartMapper.java                    # 购物车（可单独设计购物车表，或使用临时表/Redis）
 ```
-
-#### 6.4.3 XML 映射（使用 `resultMap` + `collection`）
-
-```xml
-<resultMap id="UserWithOrdersMap" type="com.example.ecomorder.vo.UserWithOrdersVO">
-    <id column="user_id" property="userId"/>
-    <result column="username" property="username"/>
-    <!-- collection 表示一对多，ofType 指定集合中元素的类型 -->
-    <collection property="orders" ofType="com.example.ecomorder.vo.OrderVO">
-        <id column="order_id" property="orderId"/>
-        <result column="order_no" property="orderNo"/>
-        <result column="total_price" property="totalPrice"/>
-        <result column="status" property="status"/>
-        <result column="create_time" property="createTime"/>
-    </collection>
-</resultMap>
-
-<select id="selectUserWithOrders" resultMap="UserWithOrdersMap">
-    SELECT u.id          AS user_id,
-           u.username,
-           o.id          AS order_id,
-           o.order_no,
-           o.total_price,
-           o.status,
-           o.create_time
-    FROM user u
-    LEFT JOIN `order` o ON u.id = o.user_id
-    WHERE u.id = #{userId}
-</select>
 ```
-
-**关键点**：
-- 使用 `LEFT JOIN` 确保即使没有订单，用户信息也能返回（orders 为空集合）。
-- `collection` 标签会遍历结果集，自动将同一用户的订单组装成 List。
-- 主表（user）的列必须设置 `<id>` 标签，否则 MyBatis 无法区分对象边界。
-
----
-
-### 6.5 多对多关联查询（Order ↔ Product 通过 order_item）
-
-**业务场景**：查询一个订单，同时展示该订单包含的所有商品信息（含数量、小计）。
-
-#### 6.5.1 VO 类
-
-```java
-@Data
-public class OrderWithProductsVO {
-    private Long orderId;
-    private String orderNo;
-    private BigDecimal totalPrice;
-    private List<OrderProductVO> products;
-}
-
-@Data
-public class OrderProductVO {
-    private Long productId;
-    private String productName;
-    private Integer quantity;
-    private BigDecimal subtotal;
-}
+src/main/resources/mapper/
+│
+├── UserMapper.xml                     # SQL：一对一（user left join user_profile）
+├── UserProfileMapper.xml
+├── ProductMapper.xml                  # 动态 SQL 条件查询、分页
+├── OrderMapper.xml                    # 一对多（user_id 查订单集合）
+├── OrderItemMapper.xml                # 多对多（订单→商品，连 product 表）
+└── CartMapper.xml                     # 购物车 SQL（如设计了购物车表）
 ```
-
-#### 6.5.2 Mapper 接口
-
-```java
-public interface OrderMapper {
-    OrderWithProductsVO selectOrderWithProducts(@Param("orderId") Long orderId);
-}
+### 4. 视图对象（VO） – 用于 Service 层封装返回
 ```
-
-#### 6.5.3 XML 映射（三表关联）
-
-```xml
-<resultMap id="OrderWithProductsMap" type="com.example.ecomorder.vo.OrderWithProductsVO">
-    <id column="order_id" property="orderId"/>
-    <result column="order_no" property="orderNo"/>
-    <result column="total_price" property="totalPrice"/>
-    <!-- 一对多：订单包含多个商品 -->
-    <collection property="products" ofType="com.example.ecomorder.vo.OrderProductVO">
-        <id column="product_id" property="productId"/>
-        <result column="product_name" property="productName"/>
-        <result column="quantity" property="quantity"/>
-        <result column="subtotal" property="subtotal"/>
-    </collection>
-</resultMap>
-
-<select id="selectOrderWithProducts" resultMap="OrderWithProductsMap">
-    SELECT o.id            AS order_id,
-           o.order_no,
-           o.total_price,
-           p.id            AS product_id,
-           p.name          AS product_name,
-           oi.quantity,
-           oi.subtotal
-    FROM `order` o
-    LEFT JOIN order_item oi ON o.id = oi.order_id
-    LEFT JOIN product p ON oi.product_id = p.id
-    WHERE o.id = #{orderId}
-</select>
+src/main/java/com.example.javaee_ecomorder/vo/
+│
+├── CartItemVO.java
+├── CartProductVO.java
+├── CartVO.java
+├── LoginResultVO.java
+├── OrderCreateResultVO.java
+├── OrderDetailVO.java
+├── OrderListVO.java
+├── OrderProductVO.java
+├── OrderVO.java                       # 订单 + 用户信息 + 商品列表（多对多）
+├── OrderWithProductVO.java
+├── ProductVO.java                     # 商品详情 + 库存状态描述
+├── UserCartVO.java
+├── UserInfoVO.java
+├── UserListVO.java
+├── UserProfileVO.java
+├── UserWithProfileVO.java
+├── UserWithProfileVO.java
+├── UserVO.java                        # 用户信息 + 扩展信息（一对一）
+├── CartVO.java                        # 购物车项 + 商品详情 + 小计
+└── PageResult.java                    # 通用分页结果封装
 ```
-
-**说明**：
-- 多对多关系是通过中间表 `order_item` 拆解为两个一对多，本质上仍然是 MyBatis 的 `collection` 处理。
-- 如果订单没有商品（异常情况），`products` 为空集合。
-
----
-
-### 6.6 高级：一对多嵌套多对多（用户 -> 订单 -> 商品）
-
-有时需要更深层嵌套，例如“查询用户，包含其每个订单的详细商品”。只需在 `collection` 中再嵌套 `collection`。
-
-```xml
-<resultMap id="UserWithOrdersAndProductsMap" type="com.example.ecomorder.vo.UserDeepVO">
-    <id column="user_id" property="userId"/>
-    <result column="username" property="username"/>
-    <collection property="orders" ofType="com.example.ecomorder.vo.OrderDeepVO">
-        <id column="order_id" property="orderId"/>
-        <result column="order_no" property="orderNo"/>
-        <!-- 订单里的商品集合 -->
-        <collection property="products" ofType="com.example.ecomorder.vo.OrderProductVO">
-            <id column="product_id" property="productId"/>
-            <result column="product_name" property="productName"/>
-            <result column="quantity" property="quantity"/>
-        </collection>
-    </collection>
-</resultMap>
+### 5. 工具类与常量
 ```
-
-SQL 需要关联 user、order、order_item、product 四张表，MyBatis 会自动完成多层嵌套。
-
----
-
-### 6.7 动态 SQL 与多条件分页（实际应用）
-
-#### 6.7.1 复杂查询：订单列表（按用户、状态、时间范围）
-
-**Mapper 接口**：
-
-```java
-List<OrderVO> selectOrderPage(@Param("userId") Long userId,
-                              @Param("status") Integer status,
-                              @Param("startTime") Date startTime,
-                              @Param("endTime") Date endTime,
-                              @Param("offset") int offset,
-                              @Param("limit") int limit);
+src/main/java/com.example.javaee_ecomorder/util/
+│
+├── JwtUtil.java                       # JWT 生成与解析
+├── RedisCacheUtil.java                # Redis 缓存工具（封装 get/set/delete）
+├── OrderNoGenerator.java              # 唯一订单号生成器
+└── Result.java                        # 统一响应结果封装（code, msg, data）
+└── PageResult
+└── EncryptUtil
 ```
-
-**XML 动态 SQL**：
-
-```xml
-<select id="selectOrderPage" resultType="com.example.ecomorder.vo.OrderVO">
-    SELECT id, order_no, total_price, status, create_time
-    FROM `order`
-    <where>
-        <if test="userId != null">
-            AND user_id = #{userId}
-        </if>
-        <if test="status != null">
-            AND status = #{status}
-        </if>
-        <if test="startTime != null">
-            AND create_time >= #{startTime}
-        </if>
-        <if test="endTime != null">
-            AND create_time &lt;= #{endTime}
-        </if>
-    </where>
-    ORDER BY create_time DESC
-    LIMIT #{offset}, #{limit}
-</select>
 ```
-
----
-
-### 6.8 注意事项与最佳实践
-
-| 注意点 | 详细说明 |
-|--------|----------|
-| **XML 文件位置** | 必须放在 `mapper-locations` 配置的路径下（如 `classpath:mapper/*.xml`），且与 Mapper 接口包路径无关。 |
-| **命名空间唯一性** | 每个 XML 的 `namespace` 必须与 Mapper 接口全类名一致，否则启动报错。 |
-| **参数传递** | 多参数必须使用 `@Param("xxx")`，否则 MyBatis 会用 `param1, param2` 难以维护。 |
-| **结果映射** | 单表简单查询可用 `resultType`；多表关联推荐使用 `resultMap`，尤其是涉及 `association` 或 `collection`。 |
-| **N+1 查询问题** | 上述 `LEFT JOIN` 一次性查出所有数据，避免循环查询（N+1）。但若数据量极大，可考虑分步查询（使用 `select` 属性），但会增加 SQL 次数。 |
-| **性能优化** | 对于一对多/多对多，尽量使用 `LEFT JOIN` 一次关联，同时注意字段不要过多（避免结果集膨胀）。 |
-| **事务中的查询** | 若需要行锁，使用 `SELECT ... FOR UPDATE`，对应 Mapper 方法添加 `@Select` 注解或 XML 中写 `for update`。 |
-
----
-
-### 6.9 完整示例：多表查询在 Service 中的调用
-
-```java
-@Service
-public class ReportServiceImpl implements ReportService {
-    @Autowired
-    private UserMapper userMapper;
-    @Autowired
-    private OrderMapper orderMapper;
-
-    @Override
-    public UserWithOrdersVO getUserOrderSummary(Long userId) {
-        // 直接调用 mapper 的一对多查询，返回结果已是 VO（组装好订单列表）
-        return userMapper.selectUserWithOrders(userId);
-    }
-
-    @Override
-    public OrderWithProductsVO getOrderDetail(Long orderId) {
-        // 多对多查询
-        return orderMapper.selectOrderWithProducts(orderId);
-    }
-}
+src/main/java/ com.example.javaee_ecomorder /common/
+│
+├── StatusCode.java                    # 状态码常量
+├── OrderStatusEnum.java               # 订单状态枚举
+└── CacheKeyPrefix.java                # Redis 缓存 key 前缀常量
 ```
-
-**注意**：Service 层不应直接返回 Entity，而是返回 VO，因此 Mapper 的多表查询结果可以直接映射到 VO，符合分层要求。
-
----
-
-### 6.10 验证实验要求（多表查询）
-
-| 实验要求 | 对应实现 |
-|----------|----------|
-| 一对一查询 | `UserMapper.selectUserWithProfile` |
-| 一对多查询 | `UserMapper.selectUserWithOrders` |
-| 多对多查询 | `OrderMapper.selectOrderWithProducts` |
-| 禁止仅单表查询 | 所有业务功能中至少使用上述一种多表关联查询（如订单详情页展示商品列表） |
+### 6. Service 层（业务逻辑）
+```
+src/main/java/ com.example.javaee_ecomorder /service/
+│
+├── UserService.java                   # 接口
+├── impl/UserServiceImpl.java          # 实现：事务、校验、VO封装、缓存（用户信息）
+│
+├── ProductService.java
+├── impl/ProductServiceImpl.java       # 商品缓存逻辑（先查 Redis，回写）
+│
+├── OrderService.java
+├── impl/OrderServiceImpl.java         # 下单事务（扣库存+创建订单+清购物车）、状态流转校验
+│
+├── CartService.java
+├── impl/CartServiceImpl.java          # 购物车操作（可基于 Redis List/Hash 或 DB）
+│
+└── ReportService.java                 # 可选：批量处理、统计（满足批量处理要求）
+├── impl/ReportServiceImpl.java
+```
+### 7. Controller 层（RESTful API）
+```
+src/main/java/ com.example.javaee_ecomorder /controller/
+│
+├── UserController.java                # /api/user – 增删改查、条件分页查询
+├── ProductController.java             # /api/product – 商品 CRUD、条件分页、热门缓存
+├── OrderController.java               # /api/order – 创建、取消、修改状态、分页查询
+├── CartController.java                # /api/cart – 添加、修改、删除、清空、分页
+├── ReportController.java
+└── AuthController.java                # 登录/注册（生成 JWT，存入 Redis）
+```
+### 8. 异常处理与拦截器
+```
+src/main/java/ com.example.javaee_ecomorder /exception/
+│
+├── GlobalExceptionHandler.java        # 全局异常处理（事务回滚提示、参数校验）
+└── BusinessException.java             # 自定义业务异常
