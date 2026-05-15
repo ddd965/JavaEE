@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.javaee_ecomorder.mapper.OrderMapper">
+
+    <resultMap id="OrderEntityMap" type="com.example.javaee_ecomorder.entity.Order">
+        <id column="id" property="id"/>
+        <result column="order_no" property="orderNo"/>
+        <result column="user_id" property="userId"/>
+        <result column="total_price" property="totalPrice"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `order` (order_no, user_id, total_price, status, create_time)
+        VALUES (#{orderNo}, #{userId}, #{totalPrice}, #{status}, #{createTime})
+    </insert>
+
+    <update id="updateById">
+        UPDATE `order`
+        SET order_no   = #{orderNo},
+            user_id    = #{userId},
+            total_price = #{totalPrice},
+            status     = #{status},
+            create_time = #{createTime}
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" resultMap="OrderEntityMap">
+        SELECT id, order_no, user_id, total_price, status, create_time
+        FROM `order`
+        WHERE id = #{id}
+    </select>
+
+    <resultMap id="OrderWithProductsMap" type="com.example.javaee_ecomorder.vo.OrderWithProductsVO">
+        <id column="order_id" property="orderId"/>
+        <result column="order_no" property="orderNo"/>
+        <result column="total_price" property="totalPrice"/>
+        <collection property="products" ofType="com.example.javaee_ecomorder.vo.OrderProductVO">
+            <id column="product_id" property="productId"/>
+            <result column="product_name" property="productName"/>
+            <result column="quantity" property="quantity"/>
+            <result column="subtotal" property="subtotal"/>
+        </collection>
+    </resultMap>
+
+    <select id="selectOrderWithProducts" resultMap="OrderWithProductsMap">
+        SELECT o.id            AS order_id,
+               o.order_no,
+               o.total_price,
+               p.id            AS product_id,
+               p.name          AS product_name,
+               oi.quantity,
+               oi.subtotal
+        FROM `order` o
+                 LEFT JOIN order_item oi ON o.id = oi.order_id
+                 LEFT JOIN product p ON oi.product_id = p.id
+        WHERE o.id = #{orderId}
+    </select>
+
+    <sql id="OrderPageWhere">
+        <where>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="orderNo != null and orderNo != ''">
+                AND order_no LIKE CONCAT('%', #{orderNo}, '%')
+            </if>
+            <if test="minTotalPrice != null">
+                AND total_price &gt;= #{minTotalPrice}
+            </if>
+            <if test="maxTotalPrice != null">
+                AND total_price &lt;= #{maxTotalPrice}
+            </if>
+            <if test="startTime != null">
+                AND create_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND create_time &lt;= #{endTime}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectOrderPage" resultType="com.example.javaee_ecomorder.vo.OrderVO">
+        SELECT id            AS orderId,
+               order_no      AS orderNo,
+               total_price   AS totalPrice,
+               status,
+               create_time   AS createTime
+        FROM `order`
+        <include refid="OrderPageWhere"/>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countOrderPage" resultType="long">
+        SELECT COUNT(*)
+        FROM `order`
+        <include refid="OrderPageWhere"/>
+    </select>
+
+</mapper>

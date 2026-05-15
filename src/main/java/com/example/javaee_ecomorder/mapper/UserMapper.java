@@ -1,0 +1,33 @@
+package com.example.javaee_ecomorder.mapper;
+
+import com.example.javaee_ecomorder.dto.UserQueryDTO;
+import com.example.javaee_ecomorder.entity.User;
+import com.example.javaee_ecomorder.vo.UserListVO;
+import com.example.javaee_ecomorder.vo.UserProfileVO;
+import com.example.javaee_ecomorder.vo.UserWithOrdersVO;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+
+@Mapper
+public interface UserMapper {
+
+    UserProfileVO selectUserWithProfile(@Param("userId") Long userId);
+
+    UserWithOrdersVO selectUserWithOrders(@Param("userId") Long userId);
+
+    User selectByUsername(@Param("username") String username);
+
+    int countByUsername(@Param("username") String username);
+
+    int countByUsernameExcludeId(@Param("username") String username, @Param("excludeId") Long excludeId);
+
+    int insert(User user);
+
+    int updateUser(User user);
+
+    long countUserByQuery(@Param("query") UserQueryDTO query);
+
+    List<UserListVO> selectUserPage(@Param("query") UserQueryDTO query, @Param("offset") int offset);
+}

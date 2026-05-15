@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.javaee_ecomorder.mapper.ProductMapper">
+
+    <!-- 结果映射：将数据库列名与实体属性对应（下划线转驼峰已开启，但显式写出更清晰） -->
+    <resultMap id="BaseResultMap" type="com.example.javaee_ecomorder.entity.Product">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="price" property="price"/>
+        <result column="stock" property="stock"/>
+        <result column="category" property="category"/>
+        <result column="status" property="status"/>
+    </resultMap>
+
+    <!-- 插入：使用自增主键 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO product (name, price, stock, category, status)
+        VALUES (#{name}, #{price}, #{stock}, #{category}, #{status})
+    </insert>
+
+    <!-- 更新 -->
+    <update id="updateById">
+        UPDATE product
+        SET name = #{name},
+            price = #{price},
+            stock = #{stock},
+            category = #{category},
+            status = #{status}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除 -->
+    <delete id="deleteById">
+        DELETE FROM product WHERE id = #{id}
+    </delete>
+
+    <!-- 根据主键查询 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT id, name, price, stock, category, status
+        FROM product
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByIdForUpdate" resultMap="BaseResultMap">
+        SELECT id, name, price, stock, category, status
+        FROM product
+        WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <update id="decreaseStock">
+        UPDATE product
+        SET stock = stock - #{quantity}
+        WHERE id = #{id}
+          AND stock &gt;= #{quantity}
+    </update>
+
+    <update id="increaseStock">
+        UPDATE product
+        SET stock = stock + #{quantity}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 条件分页查询（动态 SQL） -->
+    <select id="selectByCondition" resultMap="BaseResultMap">
+        SELECT id, name, price, stock, category, status
+        FROM product
+        <where>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="category != null and category != ''">
+                AND category = #{category}
+            </if>
+            <if test="minPrice != null">
+                AND price >= #{minPrice}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY id DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 条件统计 -->
+    <select id="countByCondition" resultType="long">
+        SELECT COUNT(*)
+        FROM product
+        <where>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="category != null and category != ''">
+                AND category = #{category}
+            </if>
+            <if test="minPrice != null">
+                AND price >= #{minPrice}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <update id="batchUpdateStatus">
+        UPDATE product
+        SET status = #{status}
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.javaee_ecomorder.mapper.CartMapper">
+
+    <!-- 结果映射：Cart实体 -->
+    <resultMap id="BaseResultMap" type="com.example.javaee_ecomorder.entity.Cart">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="product_id" property="productId"/>
+        <result column="quantity" property="quantity"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <!-- 结果映射：CartProductVO（购物车+商品详情） -->
+    <resultMap id="CartProductVOMap" type="com.example.javaee_ecomorder.vo.CartProductVO">
+        <id column="cart_id" property="cartId"/>
+        <result column="user_id" property="userId"/>
+        <result column="product_id" property="productId"/>
+        <result column="quantity" property="quantity"/>
+        <result column="product_name" property="productName"/>
+        <result column="product_price" property="productPrice"/>
+        <result column="create_time" property="createTime"/>
+        <!-- subtotal 可以在Service层计算，也可以在SQL中计算 -->
+    </resultMap>
+
+    <!-- 结果映射：UserCartVO（用户及其购物车商品列表，一对多） -->
+    <resultMap id="UserCartVOMap" type="com.example.javaee_ecomorder.vo.UserCartVO">
+        <id column="user_id" property="userId"/>
+        <result column="username" property="username"/>
+        <collection property="items" ofType="com.example.javaee_ecomorder.vo.CartProductVO"
+                    resultMap="CartProductVOMap" columnPrefix="item_"/>
+    </resultMap>
+
+    <!-- 插入购物车（忽略重复键冲突，由应用层处理） -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO cart (user_id, product_id, quantity)
+        VALUES (#{userId}, #{productId}, #{quantity})
+            ON DUPLICATE KEY UPDATE quantity = quantity + #{quantity}
+    </insert>
+
+    <!-- 更新数量 -->
+    <update id="updateQuantity">
+        UPDATE cart SET quantity = #{quantity}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除 -->
+    <delete id="deleteById">
+        DELETE FROM cart WHERE id = #{id}
+    </delete>
+
+    <!-- 清空用户购物车 -->
+    <delete id="deleteByUserId">
+        DELETE FROM cart WHERE user_id = #{userId}
+    </delete>
+
+    <!-- 查询购物车项（根据用户和商品） -->
+    <select id="selectByUserIdAndProductId" resultMap="BaseResultMap">
+        SELECT * FROM cart
+        WHERE user_id = #{userId} AND product_id = #{productId}
+    </select>
+
+    <!-- 根据ID查询 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM cart WHERE id = #{id}
+    </select>
+
+    <!-- 查询用户购物车中的商品及其关联的商品信息（多表关联，展示一对一/多对一关系） -->
+    <select id="selectCartProductsByUserId" resultMap="CartProductVOMap">
+        SELECT
+            c.id AS cart_id,
+            c.user_id,
+            c.product_id,
+            c.quantity,
+            c.create_time,
+            p.name AS product_name,
+            p.price AS product_price
+        FROM cart c
+                 LEFT JOIN product p ON c.product_id = p.id
+        WHERE c.user_id = #{userId}
+        ORDER BY c.create_time DESC
+    </select>
+
+    <!-- 统计用户购物车记录数 -->
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM cart WHERE user_id = #{userId}
+    </select>
+
+    <!-- 批量删除购物车项 -->
+    <delete id="batchDelete">
+        DELETE FROM cart
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 查询用户完整购物车信息（包含用户姓名和购物车商品详情，一对多映射，展示MyBatis高级映射） -->
+    <select id="selectUserCartWithItems" resultMap="UserCartVOMap">
+        SELECT
+            u.id AS user_id,
+            u.username,
+            c.id AS item_cart_id,
+            c.user_id AS item_user_id,
+            c.product_id AS item_product_id,
+            c.quantity AS item_quantity,
+            c.create_time AS item_create_time,
+            p.name AS item_product_name,
+            p.price AS item_product_price
+        FROM user u
+                 LEFT JOIN cart c ON u.id = c.user_id
+                 LEFT JOIN product p ON c.product_id = p.id
+        WHERE u.id = #{userId}
+    </select>
+</mapper>

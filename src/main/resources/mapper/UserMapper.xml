@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.javaee_ecomorder.mapper.UserMapper">
+
+    <sql id="UserQueryWhere">
+        <where>
+            <if test="query.username != null and query.username != ''">
+                AND u.username LIKE CONCAT('%', #{query.username}, '%')
+            </if>
+            <if test="query.phone != null and query.phone != ''">
+                AND u.phone LIKE CONCAT('%', #{query.phone}, '%')
+            </if>
+            <if test="query.email != null and query.email != ''">
+                AND u.email LIKE CONCAT('%', #{query.email}, '%')
+            </if>
+            <if test="query.startTime != null">
+                AND u.create_time &gt;= #{query.startTime}
+            </if>
+            <if test="query.endTime != null">
+                AND u.create_time &lt;= #{query.endTime}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectUserWithProfile" resultType="com.example.javaee_ecomorder.vo.UserProfileVO">
+        SELECT u.id,
+               u.username,
+               u.email,
+               u.phone,
+               u.create_time AS createTime,
+               up.real_name  AS realName,
+               up.address,
+               up.points
+        FROM user u
+                 LEFT JOIN user_profile up ON u.id = up.user_id
+        WHERE u.id = #{userId}
+    </select>
+
+    <select id="selectByUsername" resultType="com.example.javaee_ecomorder.entity.User">
+        SELECT id, username, password, email, phone, create_time
+        FROM user
+        WHERE username = #{username}
+    </select>
+
+    <select id="countByUsername" resultType="int">
+        SELECT COUNT(*) FROM user WHERE username = #{username}
+    </select>
+
+    <select id="countByUsernameExcludeId" resultType="int">
+        SELECT COUNT(*) FROM user WHERE username = #{username} AND id != #{excludeId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user (username, password, email, phone, create_time)
+        VALUES (#{username}, #{password}, #{email}, #{phone}, #{createTime})
+    </insert>
+
+    <update id="updateUser">
+        UPDATE user
+        SET username = #{username},
+            email    = #{email},
+            phone    = #{phone}
+        WHERE id = #{id}
+    </update>
+
+    <select id="countUserByQuery" resultType="long">
+        SELECT COUNT(*)
+        FROM user u
+        <include refid="UserQueryWhere"/>
+    </select>
+
+    <select id="selectUserPage" resultType="com.example.javaee_ecomorder.vo.UserListVO">
+        SELECT u.id, u.username, u.email, u.phone, u.create_time
+        FROM user u
+        <include refid="UserQueryWhere"/>
+        ORDER BY u.id DESC
+        LIMIT #{offset}, #{query.pageSize}
+    </select>
+
+    <resultMap id="UserWithOrdersMap" type="com.example.javaee_ecomorder.vo.UserWithOrdersVO">
+        <id column="user_id" property="userId"/>
+        <result column="username" property="username"/>
+        <collection property="orders" ofType="com.example.javaee_ecomorder.vo.OrderVO">
+            <id column="order_id" property="orderId"/>
+            <result column="order_no" property="orderNo"/>
+            <result column="total_price" property="totalPrice"/>
+            <result column="status" property="status"/>
+            <result column="create_time" property="createTime"/>
+        </collection>
+    </resultMap>
+
+    <select id="selectUserWithOrders" resultMap="UserWithOrdersMap">
+        SELECT u.id          AS user_id,
+               u.username,
+               o.id          AS order_id,
+               o.order_no,
+               o.total_price,
+               o.status,
+               o.create_time
+        FROM user u
+                 LEFT JOIN `order` o ON u.id = o.user_id
+        WHERE u.id = #{userId}
+    </select>
+
+</mapper>
