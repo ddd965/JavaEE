@@ -1,5 +1,6 @@
 package com.example.javaee_ecomorder.service.impl;
 
+import com.example.javaee_ecomorder.common.CacheKeyPrefix;
 import com.example.javaee_ecomorder.dto.UserQueryDTO;
 import com.example.javaee_ecomorder.dto.UserRegisterDTO;
 import com.example.javaee_ecomorder.dto.UserUpdateDTO;
@@ -10,7 +11,9 @@ import com.example.javaee_ecomorder.mapper.UserMapper;
 import com.example.javaee_ecomorder.mapper.UserProfileMapper;
 import com.example.javaee_ecomorder.service.UserService;
 import com.example.javaee_ecomorder.utils.EncryptUtil;
+import com.example.javaee_ecomorder.utils.JwtUtil;
 import com.example.javaee_ecomorder.utils.PageResult;
+import com.example.javaee_ecomorder.utils.RedisCacheUtil;
 import com.example.javaee_ecomorder.vo.LoginResultVO;
 import com.example.javaee_ecomorder.vo.OrderVO;
 import com.example.javaee_ecomorder.vo.UserListVO;
@@ -18,7 +21,6 @@ import com.example.javaee_ecomorder.vo.UserProfileVO;
 import com.example.javaee_ecomorder.vo.UserWithOrdersVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -27,7 +29,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -39,7 +40,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserProfileMapper profileMapper;
     @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    private JwtUtil jwtUtil;
+    @Autowired
+    private RedisCacheUtil redisCacheUtil;
 
     @Override
     public LoginResultVO login(String username, String password) {
@@ -50,9 +53,9 @@ public class UserServiceImpl implements UserService {
         if (user == null || !user.getPassword().equals(EncryptUtil.md5(password))) {
             throw new BusinessException("用户名或密码错误");
         }
-        String token = UUID.randomUUID().toString().replace("-", "");
-        redisTemplate.opsForValue().set("token:" + token, user.getId(), 2, TimeUnit.HOURS);
-        long expireAt = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(2);
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername());
+        redisCacheUtil.set(CacheKeyPrefix.TOKEN + token, user.getId(), jwtUtil.getExpireMillis(), TimeUnit.MILLISECONDS);
+        long expireAt = System.currentTimeMillis() + jwtUtil.getExpireMillis();
         LoginResultVO result = new LoginResultVO();
         result.setUserId(user.getId());
         result.setUsername(user.getUsername());

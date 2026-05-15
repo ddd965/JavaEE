@@ -1,5 +1,6 @@
 package com.example.javaee_ecomorder.service.impl;
 
+import com.example.javaee_ecomorder.common.CacheKeyPrefix;
 import com.example.javaee_ecomorder.dto.ProductAddDTO;
 import com.example.javaee_ecomorder.dto.ProductQueryDTO;
 import com.example.javaee_ecomorder.dto.ProductUpdateDTO;
@@ -8,11 +9,11 @@ import com.example.javaee_ecomorder.exception.BusinessException;
 import com.example.javaee_ecomorder.mapper.ProductMapper;
 import com.example.javaee_ecomorder.service.ProductService;
 import com.example.javaee_ecomorder.utils.PageResult;
+import com.example.javaee_ecomorder.utils.RedisCacheUtil;
 import com.example.javaee_ecomorder.vo.ProductVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -29,9 +30,7 @@ public class ProductServiceImpl implements ProductService {
     @Autowired
     private ProductMapper productMapper;
     @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-
-    private static final String PRODUCT_CACHE_PREFIX = "product:";
+    private RedisCacheUtil redisCacheUtil;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -59,7 +58,7 @@ public class ProductServiceImpl implements ProductService {
             throw new BusinessException("商品不存在");
         }
         productMapper.deleteById(id);
-        redisTemplate.delete(PRODUCT_CACHE_PREFIX + id);
+        redisCacheUtil.delete(CacheKeyPrefix.PRODUCT + id);
     }
 
     @Override
@@ -75,24 +74,24 @@ public class ProductServiceImpl implements ProductService {
         Product product = new Product();
         BeanUtils.copyProperties(dto, product);
         productMapper.updateById(product);
-        redisTemplate.delete(PRODUCT_CACHE_PREFIX + dto.getId());
+        redisCacheUtil.delete(CacheKeyPrefix.PRODUCT + dto.getId());
     }
 
     @Override
     public ProductVO getProductById(Long id) {
-        String cacheKey = PRODUCT_CACHE_PREFIX + id;
-        ProductVO vo = (ProductVO) redisTemplate.opsForValue().get(cacheKey);
+        String cacheKey = CacheKeyPrefix.PRODUCT + id;
+        ProductVO vo = (ProductVO) redisCacheUtil.get(cacheKey);
         if (vo != null) {
             log.info("命中缓存：商品{}", id);
             return vo;
         }
         Product product = productMapper.selectById(id);
         if (product == null) {
-            redisTemplate.opsForValue().set(cacheKey, null, 5, TimeUnit.MINUTES);
+            redisCacheUtil.set(cacheKey, null, 5, TimeUnit.MINUTES);
             throw new BusinessException("商品不存在");
         }
         vo = new ProductVO(product);
-        redisTemplate.opsForValue().set(cacheKey, vo, 30, TimeUnit.MINUTES);
+        redisCacheUtil.set(cacheKey, vo, 30, TimeUnit.MINUTES);
         return vo;
     }
 
@@ -129,7 +128,7 @@ public class ProductServiceImpl implements ProductService {
         }
         productMapper.batchUpdateStatus(ids, status);
         for (Long id : ids) {
-            redisTemplate.delete(PRODUCT_CACHE_PREFIX + id);
+            redisCacheUtil.delete(CacheKeyPrefix.PRODUCT + id);
         }
     }
 }

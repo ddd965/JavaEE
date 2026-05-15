@@ -1,16 +1,17 @@
 package com.example.javaee_ecomorder.utils;
 
+import com.example.javaee_ecomorder.common.StatusCode;
 import lombok.Data;
 
 @Data
 public class Result<T> {
-    private Integer code;   // 200成功，其他失败
+    private Integer code;
     private String message;
     private T data;
 
     public static <T> Result<T> success(T data) {
         Result<T> result = new Result<>();
-        result.setCode(200);
+        result.setCode(StatusCode.SUCCESS);
         result.setMessage("success");
         result.setData(data);
         return result;
@@ -22,7 +23,7 @@ public class Result<T> {
 
     public static <T> Result<T> error(String message) {
         Result<T> result = new Result<>();
-        result.setCode(500);
+        result.setCode(StatusCode.ERROR);
         result.setMessage(message);
         return result;
     }

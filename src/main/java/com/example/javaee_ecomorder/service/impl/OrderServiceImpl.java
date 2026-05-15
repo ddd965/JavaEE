@@ -1,5 +1,6 @@
 package com.example.javaee_ecomorder.service.impl;
 
+import com.example.javaee_ecomorder.common.OrderStatusEnum;
 import com.example.javaee_ecomorder.dto.OrderCreateDTO;
 import com.example.javaee_ecomorder.dto.OrderQueryDTO;
 import com.example.javaee_ecomorder.dto.OrderUpdateStatusDTO;
@@ -11,6 +12,7 @@ import com.example.javaee_ecomorder.mapper.OrderItemMapper;
 import com.example.javaee_ecomorder.mapper.OrderMapper;
 import com.example.javaee_ecomorder.mapper.ProductMapper;
 import com.example.javaee_ecomorder.service.OrderService;
+import com.example.javaee_ecomorder.utils.OrderNoGenerator;
 import com.example.javaee_ecomorder.utils.PageResult;
 import com.example.javaee_ecomorder.vo.OrderDetailVO;
 import com.example.javaee_ecomorder.vo.OrderListVO;
@@ -59,7 +61,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order order = new Order();
-        order.setOrderNo(generateOrderNo());
+        order.setOrderNo(OrderNoGenerator.generate());
         order.setUserId(dto.getUserId());
         order.setTotalPrice(calculateTotal(dto.getItems()));
         order.setStatus(0);
@@ -115,7 +117,7 @@ public class OrderServiceImpl implements OrderService {
         detail.setUserId(order.getUserId());
         detail.setTotalPrice(order.getTotalPrice());
         detail.setStatus(order.getStatus());
-        detail.setStatusDesc(statusDesc(order.getStatus()));
+        detail.setStatusDesc(OrderStatusEnum.getDesc(order.getStatus()));
         detail.setCreateTime(order.getCreateTime());
 
         List<OrderDetailVO.OrderProductVO> products = new ArrayList<>();
@@ -195,24 +197,6 @@ public class OrderServiceImpl implements OrderService {
         v.setCreateTime(o.getCreateTime());
         v.setStatus(o.getStatus());
         return v;
-    }
-
-    private static String statusDesc(Integer status) {
-        if (status == null) {
-            return "未知状态";
-        }
-        return switch (status) {
-            case 0 -> "待支付";
-            case 1 -> "已支付";
-            case 2 -> "已发货";
-            case 3 -> "已完成";
-            case 4 -> "已取消";
-            default -> "未知状态";
-        };
-    }
-
-    private String generateOrderNo() {
-        return "ORD" + System.currentTimeMillis();
     }
 
     private BigDecimal calculateTotal(List<OrderCreateDTO.OrderItemDTO> items) {
