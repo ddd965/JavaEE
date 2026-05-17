@@ -47,6 +47,13 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void clearCart(Long userId) {
+        cartMapper.deleteByUserId(userId);
+        evictCartCache(userId);
+    }
+
+    @Override
     public void updateQuantity(CartUpdateDTO dto) {
         Cart cart = cartMapper.selectByUserIdAndProductId(dto.getUserId(), dto.getProductId());
         if (cart == null) {

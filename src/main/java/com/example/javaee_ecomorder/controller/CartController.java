@@ -40,4 +40,9 @@ public class CartController {
         CartVO cart = cartService.getCart(userId);
         return Result.success(cart);
     }
+    @DeleteMapping("/clear")
+    public Result<Void> clearCart(@RequestParam Long userId) {
+        cartService.clearCart(userId);
+        return Result.success();
+    }
 }
