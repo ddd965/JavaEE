@@ -1,5 +1,10 @@
 package com.example.javaee_ecomorder.controller;
 
+import com.example.javaee_ecomorder.annotation.CacheRedis;
+import com.example.javaee_ecomorder.annotation.OperateLog;
+import com.example.javaee_ecomorder.annotation.PerfMonitor;
+import com.example.javaee_ecomorder.annotation.RequireLogin;
+import com.example.javaee_ecomorder.annotation.RequirePermission;
 import com.example.javaee_ecomorder.dto.ProductAddDTO;
 import com.example.javaee_ecomorder.dto.ProductQueryDTO;
 import com.example.javaee_ecomorder.dto.ProductUpdateDTO;
@@ -56,6 +61,10 @@ public class ProductController {
      * @return 统一响应
      */
     @DeleteMapping("/{id}")
+    @RequireLogin
+    @RequirePermission("product:delete")
+    @OperateLog(module = "product", type = "DELETE")
+    @PerfMonitor(threshold = 500)
     public Result<Void> delete(@PathVariable @NotNull Long id) {
         productService.deleteProduct(id);
         return Result.success();
@@ -68,6 +77,9 @@ public class ProductController {
      * @return 商品VO
      */
     @GetMapping("/{id}")
+    @RequireLogin
+    @CacheRedis(key = "'product:' + #id", ttl = 1800)
+    @PerfMonitor
     public Result<ProductVO> getById(@PathVariable @NotNull Long id) {
         ProductVO vo = productService.getProductById(id);
         return Result.success(vo);

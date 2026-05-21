@@ -1,7 +1,9 @@
 package com.example.javaee_ecomorder.interceptor;
 
 import com.example.javaee_ecomorder.common.CacheKeyPrefix;
-import com.example.javaee_ecomorder.exception.BusinessException;
+import com.example.javaee_ecomorder.config.EcomAopProperties;
+import com.example.javaee_ecomorder.context.UserInfo;
+import com.example.javaee_ecomorder.exception.UnauthorizedException;
 import com.example.javaee_ecomorder.utils.RedisCacheUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,6 +17,8 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Autowired
     private RedisCacheUtil redisCacheUtil;
+    @Autowired
+    private EcomAopProperties aopProperties;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
@@ -25,17 +29,39 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (uri.endsWith("/auth/login") || uri.endsWith("/users/register")) {
             return true;
         }
-        String token = request.getHeader("Authorization");
+        String token = request.getHeader(aopProperties.getTokenHeader());
         if (StringUtils.hasText(token) && token.startsWith("Bearer ")) {
             token = token.substring(7);
         }
         if (!StringUtils.hasText(token)) {
-            throw new BusinessException("未登录，请先登录");
+            throw new UnauthorizedException("未登录，请先登录");
         }
-        if (!redisCacheUtil.hasKey(CacheKeyPrefix.TOKEN + token)) {
-            throw new BusinessException("登录已过期，请重新登录");
+        Object cached = redisCacheUtil.get(CacheKeyPrefix.TOKEN + token);
+        if (cached == null) {
+            throw new UnauthorizedException("登录已过期，请重新登录");
         }
-        request.setAttribute("userId", redisCacheUtil.get(CacheKeyPrefix.TOKEN + token));
+        Long userId = extractUserId(cached);
+        request.setAttribute("userId", userId);
+        request.setAttribute("currentUser", cached);
         return true;
+    }
+
+    private Long extractUserId(Object cached) {
+        if (cached instanceof UserInfo userInfo) {
+            return userInfo.getUserId();
+        }
+        if (cached instanceof Number number) {
+            return number.longValue();
+        }
+        if (cached instanceof java.util.Map<?, ?> map) {
+            Object userId = map.get("userId");
+            if (userId == null) {
+                userId = map.get("id");
+            }
+            if (userId instanceof Number number) {
+                return number.longValue();
+            }
+        }
+        throw new UnauthorizedException("登录信息无效");
     }
 }

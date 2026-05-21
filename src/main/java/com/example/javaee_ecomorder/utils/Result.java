@@ -27,4 +27,18 @@ public class Result<T> {
         result.setMessage(message);
         return result;
     }
+
+    public static <T> Result<T> unauthorized(String message) {
+        Result<T> result = new Result<>();
+        result.setCode(StatusCode.UNAUTHORIZED);
+        result.setMessage(message);
+        return result;
+    }
+
+    public static <T> Result<T> forbidden(String message) {
+        Result<T> result = new Result<>();
+        result.setCode(StatusCode.FORBIDDEN);
+        result.setMessage(message);
+        return result;
+    }
 }

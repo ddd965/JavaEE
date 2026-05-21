@@ -1,6 +1,7 @@
 package com.example.javaee_ecomorder.service.impl;
 
 import com.example.javaee_ecomorder.common.CacheKeyPrefix;
+import com.example.javaee_ecomorder.context.UserInfo;
 import com.example.javaee_ecomorder.dto.UserQueryDTO;
 import com.example.javaee_ecomorder.dto.UserRegisterDTO;
 import com.example.javaee_ecomorder.dto.UserUpdateDTO;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -54,7 +56,11 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException("用户名或密码错误");
         }
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());
-        redisCacheUtil.set(CacheKeyPrefix.TOKEN + token, user.getId(), jwtUtil.getExpireMillis(), TimeUnit.MILLISECONDS);
+        UserInfo userInfo = new UserInfo();
+        userInfo.setUserId(user.getId());
+        userInfo.setUsername(user.getUsername());
+        userInfo.setPermissions(resolvePermissions(user.getUsername()));
+        redisCacheUtil.set(CacheKeyPrefix.TOKEN + token, userInfo, jwtUtil.getExpireMillis(), TimeUnit.MILLISECONDS);
         long expireAt = System.currentTimeMillis() + jwtUtil.getExpireMillis();
         LoginResultVO result = new LoginResultVO();
         result.setUserId(user.getId());
@@ -62,6 +68,13 @@ public class UserServiceImpl implements UserService {
         result.setToken(token);
         result.setExpireTime(expireAt);
         return result;
+    }
+
+    private List<String> resolvePermissions(String username) {
+        if ("admin".equalsIgnoreCase(username)) {
+            return Arrays.asList("product:delete", "product:update", "product:query", "order:manage");
+        }
+        return Arrays.asList("product:query", "order:query");
     }
 
     @Override

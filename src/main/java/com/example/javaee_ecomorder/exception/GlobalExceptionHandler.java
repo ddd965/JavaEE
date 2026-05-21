@@ -16,6 +16,16 @@ public class GlobalExceptionHandler {
         return Result.error(e.getMessage());
     }
 
+    @ExceptionHandler(UnauthorizedException.class)
+    public Result<Void> handleUnauthorizedException(UnauthorizedException e) {
+        return Result.unauthorized(e.getMessage());
+    }
+
+    @ExceptionHandler(PermissionDeniedException.class)
+    public Result<Void> handlePermissionDeniedException(PermissionDeniedException e) {
+        return Result.forbidden(e.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception e) {
         e.printStackTrace();
