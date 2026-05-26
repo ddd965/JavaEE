@@ -1,140 +1,158 @@
-修改代码的具体思路（AOP 切面增量开发）
- 基于原有电商订单管理系统（SpringBoot + MyBatis + Redis），按以下步骤新增 AOP 相关代码，不侵入原有业务逻辑。
- 一、整体修改概览
-| 类型 | 操作 | 数量 |
-|------|------|------|
-| 新增包 | 创建 `annotation`、`aop`、`enums`、`context` 包 | 4 个 |
-| 新增注解类 | 自定义注解（`@RequireLogin`、`@RequirePermission`、`@OperateLog`、`@CacheRedis`、`@PerfMonitor`） | 5 个 |
-| 新增切面类 | 实现日志、异常、性能、权限、审计、缓存等切面 | 6 个 |
-| 新增工具类 | 用户上下文 `UserContext`、IP 工具 `IpUtil` | 2 个 |
-| 新增枚举 | 操作类型枚举 `OperationType` | 1 个 |
-| 新增实体/Mapper | 审计日志表 `AuditLog` 对应实体及 Mapper（可选） | 2 个 |
-| 修改原有类 | 在登录成功后写入 Redis Token 及权限；在全局异常处理中调整（如已有则不改） | 1~2 个 |
+使用 Cursor 开发“电商订单管理系统”时所需的所有代码文件清单（按开发顺序排列） 
+> 注：仅列出文件名与职责，不包含具体代码实现。
+## 一、项目功能总结（电商订单管理系统）
+### 核心业务模块（4个，满足增、删、改、条件查询、分页查询）
+| 模块 | 功能说明 | 包含操作 |
+|------|----------|----------|
+| 商品管理 | 维护商品信息 | 增加商品、删除商品、修改商品、按名称/分类/价格区间条件查询、分页查询 |
+| 订单管理 | 用户下单、订单状态流转 | 创建订单、取消订单、修改订单状态、按订单号/状态/时间范围查询、分页查询 |
+| 用户管理 | 用户注册及信息维护 | 新增用户、删除用户、修改用户信息、按用户名/手机号/邮箱条件查询、分页查询 |
+| 购物车管理 | 暂存用户选购的商品 | 添加商品到购物车、删除购物车项、修改数量、清空购物车、查询当前用户购物车列表（分页） |
+### 满足实验要求的其他关键特性
+- 多表关联查询（MyBatis）  
+  - 一对一：查询用户及其扩展信息（`user` + `user_profile`）  
+  - 一对多：查询用户及其所有订单（`user` + `order`）  
+  - 多对多：查询订单及其包含的所有商品（`order` ↔ `product` 通过 `order_item`）
+- Redis 缓存应用  
+  - 商品热点数据缓存（商品详情、商品列表分页）  
+  - 用户登录令牌（JWT + Redis 黑名单/白名单）  
+  - 避免缓存穿透/击穿（布隆过滤器或空值缓存）
+- Service 层复杂逻辑（至少包含两项）  
+  - 声明式事务管理（下单时扣减库存、创建订单、清空购物车）  
+  - 业务校验（库存是否充足、订单状态流转合法性、用户权限）  
+  - VO 封装（返回给前端的对象不是 Entity）  
+  - 缓存逻辑（先查 Redis，未命中再查 DB 并回写）
 
- 二、详细修改清单（按包结构）
- 1. 新建包：`com.example.ecomorder.annotation`
-新增注解类（5 个）
-| 注解名 | 作用 | 属性 | 目标 |
-|--------|------|------|------|
-| `@RequireLogin` | 标记需要登录的方法 | 无| METHOD |
-| `@RequirePermission` | 标记需要特定权限的方法 | `String[] value()` 权限标识，如 `"product:delete"` | METHOD |
-| `@OperateLog` | 标记需要记录操作审计日志的方法 | `String module()` 模块名；`String type()` 操作类型（增/删/改等） | METHOD |
-| `@CacheRedis` | 标记需要自动缓存的方法（查缓存→查库→回写） | `String key()` SpEL 表达式，如 `"product:#id"`；`long ttl()` 过期时间（秒） | METHOD |
-| `@PerfMonitor` | 标记需要性能监控的方法 | `long threshold()` 自定义阈值（毫秒），默认 500 | METHOD |
-
-保留策略：`RetentionPolicy.RUNTIME`，目标：`ElementType.METHOD`。
-
- 2. 新建包：`com.example.ecomorder.aop`
-新增切面类（6 个）
-| 切面类名 | 对应功能 | 切点表达式（简述） | 通知类型 | 核心逻辑 |
-|----------|----------|-------------------|----------|----------|
-| `LogAspect` | 统一请求日志 | `execution(* com.example..controller.*.*(..))` | `@Around` | 记录 URL、方法、IP、参数、返回值、耗时，输出结构化日志 |
-| `ExceptionAspect` | 统一异常封装 | `execution(* com.example..controller.*.*(..))` 或 `@AfterThrowing` | `@AfterThrowing` + `@Around` | 捕获所有异常，转换为 `ResultVO`，记录异常类型、位置、参数 |
-| `PerformanceAspect` | 接口性能监控 | `@annotation(PerfMonitor)`  | `@Around` | 计算方法耗时，超过阈值（500ms）打印警告 |
-| `PermissionAspect` | 权限校验 | `@annotation(RequireLogin)` | `@Around` | 从 Header 取 Token → 查 Redis → 校验登录态/权限 → 通过后存入 `UserContext` |
-| `AuditAspect` | 操作审计日志 | `@annotation(OperateLog)` | `@AfterReturning` | 获取当前用户（从 `UserContext`）、操作模块、类型、内容，存入数据库或 Redis 队列 |
-| `CacheAspect` | Redis 缓存增强 | `@annotation(CacheRedis)` | `@Around` | 解析 SpEL 生成 key → 查缓存 → 命中返回 → 未命中执行方法 → 结果回写缓存（处理穿透/击穿） |
-
-注意事项：
-- 所有切面类需加 `@Aspect` 和 `@Component` 注解。
-- 切面执行顺序：建议 `@Order(1)` 给权限切面，`@Order(2)` 给日志切面等，避免权限校验失败时仍记录过多日志。
-
- 3. 新建包：`com.example.ecomorder.context`
-新增类：`UserContext`（工具类）**
-- 作用：在同一请求线程中存储当前登录用户信息（用户 ID、用户名、权限列表），避免反复查询 Redis。
-- 属性：`private static final ThreadLocal<UserInfo> currentUser`。
-- 方法：
-  - `public static void setUser(UserInfo user)`：存入当前用户。
-  - `public static UserInfo getUser()`：获取当前用户。
-  - `public static Long getCurrentUserId()`：快捷获取用户 ID。
-  - `public static void clear()`：清除线程变量（在切面或过滤器中调用）。
-
- 4. 原有包：`com.example.ecomorder.utils`
-新增类：`IpUtil`
-- 作用：从 HttpServletRequest 中获取客户端真实 IP。
-- 方法：`public static String getIpAddr(HttpServletRequest request)`。
-
- 5. 新建包：`com.example.ecomorder.enums`
-新增枚举类：`OperationType`
-
-- `OperationType`：`ADD`、`UPDATE`、`DELETE`、`QUERY`、`EXPORT` 等。
-
-主要用于 `@OperateLog` 注解的属性值规范。
-
- 6. 必选：审计日志数据库表
-
-新增实体类：`AuditLog`
-- 对应新建表 `audit_log`，字段包括：`id`、`user_id`、`username`、`operation_type`、`content`、`result`、`create_time`。
-
-新增 Mapper：`AuditLogMapper`
-- 提供 `insert(AuditLog log)` 方法。
-
-注意：实验任务书要求“存入数据库
-
- 三、需要修改的原有类（小范围改动）
- 1. 登录接口/认证服务（如 `UserController.login` 或 `AuthService`）
-
-修改点：用户登录成功后，生成 Token（如 UUID），并将用户信息及权限列表存入 Redis：
-- Redis Key：`token:xxxx`
-- Value：用户 ID、用户名、权限列表（JSON 格式）
-- 过期时间：2 小时（与业务协商）
-- 同时将 Token 返回给前端。
-
-示例思路：
-- 在原有登录验证通过后，调用 `redisTemplate.opsForValue().set("token:" + token, userInfo, timeout, TimeUnit.HOURS)`。
-- 不要修改原有返回结构，额外增加 token 字段即可。
-
- 2. 全局异常处理器（如 `GlobalExceptionHandler`）
-
-修改点：确保所有由 AOP 切面抛出的自定义异常（如 `UnauthorizedException`、`PermissionDeniedException`、`BusinessException`）能被统一捕获并返回 `ResultVO` 格式。
-
- 四、Spring Boot 配置文件修改
-
-`application.properties` 新增 AOP 相关配置项（用于切面中读取阈值、开关等）：
-
-ecom:
-  aop:
-    performance-threshold-ms: 500      # 性能监控阈值（毫秒）
-    audit-log-enabled: true            # 是否开启审计日志
-    cache-enabled: true                # 是否开启缓存增强
-    token-header: Authorization        # Token 所在的请求头名称
-
-这些配置可以通过 `@ConfigurationProperties` 绑定到配置类中，在切面中注入使用。
-
- 五、Cursor 中具体操作步骤（按顺序）
-
-1. 新增注解类：在 `annotation` 包中依次创建上述 5 个注解类，定义属性和元注解。
-2. 新增工具类：在 `utils` 包中创建 `IpUtil`，在 `context` 包中创建 `UserContext`。
-3. 新增切面类：在 `aop` 包中创建 6 个切面类，分别编写切点表达式和通知方法（先写空壳，再填逻辑）。
-4. 修改原有登录逻辑：找到登录成功的代码位置，添加 Token 生成和 Redis 存储逻辑。
-5. 创建审计日志表：在数据库中执行建表 SQL，然后通过 MyBatis 生成 `AuditLog` 实体和 Mapper。
-6. 测试：在 Controller 方法上加 `@RequireLogin`，启动项目，用 Postman 不带 Token 访问，预期返回 401。
-
- 六、总结：修改后项目的结构变化
-
-com.example.ecomorder
-├── annotation
-│   ├── RequireLogin.java
-│   ├── RequirePermission.java
-│   ├── OperateLog.java
-│   ├── CacheRedis.java
-│   └── PerfMonitor.java
-├── aop
-│   ├── LogAspect.java
-│   ├── ExceptionAspect.java
-│   ├── PerformanceAspect.java
-│   ├── PermissionAspect.java
-│   ├── AuditAspect.java
-│   └── CacheAspect.java
-├── context
-│   └── UserContext.java
-├── enums
-│   ├── OperationType.java
-├── utils
-│   └── IpUtil.java
-├── entity
-│   └── AuditLog.java
-├── mapper
-│   └── AuditLogMapper.java
-└── controller / service / mapper
-    └── （原有代码基本不变）
+## 二、按开发顺序列出所有需要的代码文件
+> 开发顺序遵循：环境配置 → 实体层(Entity) → 数据访问层(Mapper/XML) → 业务层(Service) → 控制层(Controller) → 视图对象(VO/Util) → 前端页面与组件 → 测试与配置完善
+### 1. 后端项目结构与配置文件
+```
+src/main/java/com.example.javaee_ecomorder /
+│
+├── EcomApplication.java               # SpringBoot 启动类
+│
+└── config/                            # 配置类
+    ├── RedisConfig.java               # Redis 配置（序列化、连接工厂）
+    ├── WebMvcConfig.java              # 跨域配置、拦截器注册
+    ├── MybatisPlusConfig.java         # MyBatis 分页插件配置
+    └── SwaggerConfig.java             # API 文档（可选，便于测试）
+```
+```
+src/main/resources/
+│
+├── application. properties              # 主配置文件（数据库、Redis、日志）
+├── application-dev.yml                # 开发环境配置
+└── db/                                # 数据库脚本
+    └── data.sql                       # 初始测试数据
+```
+### 2. 实体层（Entity） – 对应数据库表
+```
+src/main/java/com.example.javaee_ecomorder/entity/
+│
+├── User.java                          # 用户表
+├── UserProfile.java                   # 用户扩展信息表（一对一）
+├── Product.java                       # 商品表
+├── Order.java                         # 订单表
+└── OrderItem.java                     # 订单商品明细表（多对多关联表）
+└── Cart.java
+```
+### 3. Mapper 层（数据访问）
+```
+src/main/java/com.example.javaee_ecomorder/mapper/
+│
+├── UserMapper.java                    # 用户表 CRUD + 一对一关联查询
+├── UserProfileMapper.java             # 扩展信息表
+├── ProductMapper.java                 # 商品表 CRUD + 条件分页
+├── OrderMapper.java                   # 订单表 + 一对多（用户→订单）
+├── OrderItemMapper.java               # 订单明细 + 多对多（订单→商品）
+└── CartMapper.java                    # 购物车（可单独设计购物车表，或使用临时表/Redis）
+```
+```
+src/main/resources/mapper/
+│
+├── UserMapper.xml                     # SQL：一对一（user left join user_profile）
+├── UserProfileMapper.xml
+├── ProductMapper.xml                  # 动态 SQL 条件查询、分页
+├── OrderMapper.xml                    # 一对多（user_id 查订单集合）
+├── OrderItemMapper.xml                # 多对多（订单→商品，连 product 表）
+└── CartMapper.xml                     # 购物车 SQL（如设计了购物车表）
+```
+### 4. 视图对象（VO） – 用于 Service 层封装返回
+```
+src/main/java/com.example.javaee_ecomorder/vo/
+│
+├── CartItemVO.java
+├── CartProductVO.java
+├── CartVO.java
+├── LoginResultVO.java
+├── OrderCreateResultVO.java
+├── OrderDetailVO.java
+├── OrderListVO.java
+├── OrderProductVO.java
+├── OrderVO.java                       # 订单 + 用户信息 + 商品列表（多对多）
+├── OrderWithProductVO.java
+├── ProductVO.java                     # 商品详情 + 库存状态描述
+├── UserCartVO.java
+├── UserInfoVO.java
+├── UserListVO.java
+├── UserProfileVO.java
+├── UserWithProfileVO.java
+├── UserWithProfileVO.java
+├── UserVO.java                        # 用户信息 + 扩展信息（一对一）
+├── CartVO.java                        # 购物车项 + 商品详情 + 小计
+└── PageResult.java                    # 通用分页结果封装
+```
+### 5. 工具类与常量
+```
+src/main/java/com.example.javaee_ecomorder/util/
+│
+├── JwtUtil.java                       # JWT 生成与解析
+├── RedisCacheUtil.java                # Redis 缓存工具（封装 get/set/delete）
+├── OrderNoGenerator.java              # 唯一订单号生成器
+└── Result.java                        # 统一响应结果封装（code, msg, data）
+└── PageResult
+└── EncryptUtil
+```
+```
+src/main/java/ com.example.javaee_ecomorder /common/
+│
+├── StatusCode.java                    # 状态码常量
+├── OrderStatusEnum.java               # 订单状态枚举
+└── CacheKeyPrefix.java                # Redis 缓存 key 前缀常量
+```
+### 6. Service 层（业务逻辑）
+```
+src/main/java/ com.example.javaee_ecomorder /service/
+│
+├── UserService.java                   # 接口
+├── impl/UserServiceImpl.java          # 实现：事务、校验、VO封装、缓存（用户信息）
+│
+├── ProductService.java
+├── impl/ProductServiceImpl.java       # 商品缓存逻辑（先查 Redis，回写）
+│
+├── OrderService.java
+├── impl/OrderServiceImpl.java         # 下单事务（扣库存+创建订单+清购物车）、状态流转校验
+│
+├── CartService.java
+├── impl/CartServiceImpl.java          # 购物车操作（可基于 Redis List/Hash 或 DB）
+│
+└── ReportService.java                 # 可选：批量处理、统计（满足批量处理要求）
+├── impl/ReportServiceImpl.java
+```
+### 7. Controller 层（RESTful API）
+```
+src/main/java/ com.example.javaee_ecomorder /controller/
+│
+├── UserController.java                # /api/user – 增删改查、条件分页查询
+├── ProductController.java             # /api/product – 商品 CRUD、条件分页、热门缓存
+├── OrderController.java               # /api/order – 创建、取消、修改状态、分页查询
+├── CartController.java                # /api/cart – 添加、修改、删除、清空、分页
+├── ReportController.java
+└── AuthController.java                # 登录/注册（生成 JWT，存入 Redis）
+```
+### 8. 异常处理与拦截器
+```
+src/main/java/ com.example.javaee_ecomorder /exception/
+│
+├── GlobalExceptionHandler.java        # 全局异常处理（事务回滚提示、参数校验）
+└── BusinessException.java             # 自定义业务异常
