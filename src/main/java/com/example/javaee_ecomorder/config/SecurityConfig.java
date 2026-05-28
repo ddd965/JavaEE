@@ -1,50 +1,64 @@
 package com.example.javaee_ecomorder.config;
 
+import com.example.javaee_ecomorder.handler.JwtAccessDeniedHandler;
+import com.example.javaee_ecomorder.handler.JwtAuthenticationEntryPoint;
+import com.example.javaee_ecomorder.security.EcomPasswordEncoder;
+import com.example.javaee_ecomorder.security.JwtAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @Autowired
+    private JwtAuthenticationEntryPoint authenticationEntryPoint;
+    @Autowired
+    private JwtAccessDeniedHandler accessDeniedHandler;
+    @Autowired
+    private CorsConfigurationSource corsConfigurationSource;
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        System.out.println("=== 自定义 SecurityConfig 已加载（含 CORS） ===");
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // 启用 CORS
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/users/register").permitAll() // 公开接口
-                        .anyRequest().permitAll() // 临时全放行，后续可收紧
-                );
-        return http.build();
+    public PasswordEncoder passwordEncoder(EcomPasswordEncoder ecomPasswordEncoder) {
+        return ecomPasswordEncoder;
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // 允许的前端地址（开发环境）
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
-        // 允许的请求方法
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        // 允许的请求头
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        // 允许携带凭证（如 Cookie）
-        configuration.setAllowCredentials(true);
-        // 预检请求的缓存时间（秒）
-        configuration.setMaxAge(3600L);
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration)
+            throws Exception {
+        return configuration.getAuthenticationManager();
+    }
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // 对所有路径生效
-        return source;
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/auth/login", "/auth/register", "/users/register", "/public/**")
+                        .permitAll()
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        return http.build();
     }
 }

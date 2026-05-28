@@ -38,7 +38,16 @@
     </select>
 
     <select id="selectByUsername" resultType="com.example.javaee_ecomorder.entity.User">
-        SELECT id, username, password, email, phone, create_time
+        SELECT id,
+               username,
+               password,
+               email,
+               phone,
+               create_time,
+               enabled,
+               account_non_locked,
+               fail_count,
+               last_login_time
         FROM user
         WHERE username = #{username}
     </select>
@@ -52,9 +61,24 @@
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO user (username, password, email, phone, create_time)
-        VALUES (#{username}, #{password}, #{email}, #{phone}, #{createTime})
+        INSERT INTO user (username, password, email, phone, create_time, enabled, account_non_locked, fail_count)
+        VALUES (#{username}, #{password}, #{email}, #{phone}, #{createTime}, 1, 1, 0)
     </insert>
+
+    <update id="updatePassword">
+        UPDATE user SET password = #{password} WHERE id = #{userId}
+    </update>
+
+    <update id="updateAccountStatus">
+        UPDATE user
+        SET account_non_locked = #{accountNonLocked},
+            fail_count         = #{failCount}
+        WHERE id = #{userId}
+    </update>
+
+    <update id="updateLastLoginTime">
+        UPDATE user SET last_login_time = NOW() WHERE id = #{userId}
+    </update>
 
     <update id="updateUser">
         UPDATE user

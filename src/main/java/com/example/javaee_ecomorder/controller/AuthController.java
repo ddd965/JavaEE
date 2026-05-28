@@ -1,8 +1,10 @@
 package com.example.javaee_ecomorder.controller;
 
-import com.example.javaee_ecomorder.service.UserService;
+import com.example.javaee_ecomorder.config.EcomAopProperties;
+import com.example.javaee_ecomorder.service.AuthService;
 import com.example.javaee_ecomorder.utils.Result;
 import com.example.javaee_ecomorder.vo.LoginResultVO;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,12 +19,27 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     @Autowired
-    private UserService userService;
+    private AuthService authService;
+    @Autowired
+    private EcomAopProperties aopProperties;
 
     @PostMapping("/login")
     public Result<LoginResultVO> login(@RequestBody @Validated LoginRequest request) {
-        LoginResultVO result = userService.login(request.getUsername(), request.getPassword());
+        LoginResultVO result = authService.login(request.getUsername(), request.getPassword());
         return Result.success(result);
+    }
+
+    @PostMapping("/logout")
+    public Result<Void> logout(HttpServletRequest request) {
+        String token = request.getHeader(aopProperties.getTokenHeader());
+        authService.logout(token);
+        return Result.success();
+    }
+
+    @PostMapping("/refresh")
+    public Result<LoginResultVO> refresh(HttpServletRequest request) {
+        String token = request.getHeader(aopProperties.getTokenHeader());
+        return Result.success(authService.refresh(token));
     }
 
     @Data

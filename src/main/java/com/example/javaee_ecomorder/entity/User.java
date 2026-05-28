@@ -11,4 +11,8 @@ public class User {
     private String email;
     private String phone;
     private Date createTime;
+    private Boolean enabled;
+    private Boolean accountNonLocked;
+    private Integer failCount;
+    private Date lastLoginTime;
 }

@@ -30,4 +30,12 @@ public interface UserMapper {
     long countUserByQuery(@Param("query") UserQueryDTO query);
 
     List<UserListVO> selectUserPage(@Param("query") UserQueryDTO query, @Param("offset") int offset);
+
+    int updatePassword(@Param("userId") Long userId, @Param("password") String password);
+
+    int updateAccountStatus(@Param("userId") Long userId,
+                            @Param("accountNonLocked") Boolean accountNonLocked,
+                            @Param("failCount") Integer failCount);
+
+    int updateLastLoginTime(@Param("userId") Long userId);
 }

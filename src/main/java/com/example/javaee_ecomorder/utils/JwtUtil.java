@@ -1,67 +1,96 @@
 package com.example.javaee_ecomorder.utils;
 
 import com.example.javaee_ecomorder.exception.BusinessException;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.concurrent.TimeUnit;
+import java.util.Date;
+import java.util.List;
 
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret:JavaEE-Ecom-Order-Secret-Key}")
+    @Value("${jwt.secret:JavaEE-Ecom-Order-Secret-Key-For-JWT-Signing-2024}")
     private String secret;
 
-    @Value("${jwt.expire-hours:2}")
-    private int expireHours;
+    @Value("${jwt.expiration:3600000}")
+    private long expiration;
 
-    public String generateToken(Long userId, String username) {
-        long expireAt = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(expireHours);
-        String payload = userId + "|" + username + "|" + expireAt;
-        String signature = hmacSha256(payload);
-        return Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(payload.getBytes(StandardCharsets.UTF_8)) + "." + signature;
+    public String generateToken(String username, List<String> authorities) {
+        Date now = new Date();
+        Date expireAt = new Date(now.getTime() + expiration);
+        return Jwts.builder()
+                .setSubject(username)
+                .claim("authorities", authorities)
+                .setIssuedAt(now)
+                .setExpiration(expireAt)
+                .signWith(signingKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String getUsernameFromToken(String token) {
+        return parseClaims(token).getSubject();
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> getAuthoritiesFromToken(String token) {
+        Object authorities = parseClaims(token).get("authorities");
+        if (authorities instanceof List<?> list) {
+            return list.stream().map(Object::toString).toList();
+        }
+        return List.of();
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Claims claims = parseClaims(token);
+            return claims.getExpiration().after(new Date());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public long getExpiration() {
+        return expiration;
     }
 
     public TokenInfo parseToken(String token) {
-        if (token == null || !token.contains(".")) {
+        if (!validateToken(token)) {
             throw new BusinessException("无效令牌");
         }
-        String[] parts = token.split("\\.", 2);
-        String payload = new String(Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);
-        if (!hmacSha256(payload).equals(parts[1])) {
-            throw new BusinessException("无效令牌");
-        }
-        String[] fields = payload.split("\\|", 3);
-        long expireAt = Long.parseLong(fields[2]);
-        if (System.currentTimeMillis() > expireAt) {
-            throw new BusinessException("令牌已过期");
-        }
+        Claims claims = parseClaims(token);
         TokenInfo info = new TokenInfo();
-        info.setUserId(Long.parseLong(fields[0]));
-        info.setUsername(fields[1]);
-        info.setExpireAt(expireAt);
+        info.setUsername(claims.getSubject());
+        info.setExpireAt(claims.getExpiration().getTime());
+        @SuppressWarnings("unchecked")
+        List<String> authorities = (List<String>) claims.get("authorities");
+        info.setAuthorities(authorities);
         return info;
     }
 
-    public long getExpireMillis() {
-        return TimeUnit.HOURS.toMillis(expireHours);
+    private Claims parseClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(signingKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 
-    private String hmacSha256(String data) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
-        } catch (Exception e) {
-            throw new BusinessException("令牌生成失败");
+    private SecretKey signingKey() {
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            byte[] padded = new byte[32];
+            System.arraycopy(keyBytes, 0, padded, 0, Math.min(keyBytes.length, 32));
+            keyBytes = padded;
         }
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     @Data
@@ -69,5 +98,6 @@ public class JwtUtil {
         private Long userId;
         private String username;
         private Long expireAt;
+        private List<String> authorities;
     }
 }

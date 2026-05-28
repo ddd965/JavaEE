@@ -2,6 +2,10 @@ package com.example.javaee_ecomorder.exception;
 
 import com.example.javaee_ecomorder.utils.Result;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -24,6 +28,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(PermissionDeniedException.class)
     public Result<Void> handlePermissionDeniedException(PermissionDeniedException e) {
         return Result.forbidden(e.getMessage());
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public Result<Void> handleAuthenticationException(AuthenticationException e) {
+        if (e instanceof LockedException) {
+            return Result.error("账户已锁定");
+        }
+        if (e instanceof BadCredentialsException) {
+            return Result.error("用户名或密码错误");
+        }
+        return Result.unauthorized("未登录或Token过期");
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public Result<Void> handleAccessDeniedException(AccessDeniedException e) {
+        return Result.forbidden("无权限");
     }
 
     @ExceptionHandler(Exception.class)
