@@ -1,61 +1,23 @@
- 实验三：后端代码修改思路
-> 基于已有项目进行增量修改，新增 Spring Security + JWT + Redis 认证授权，并编写完整测试代码。以下列出需要新增和修改的类及接口，不提供具体代码，只说明职责和关键方法。
-一、新增的包和类（安全模块）
-1. `com.example.ecomorder.config`
-| 类名 | 作用 | 关键属性 / 方法 |
-|------|------|----------------|
-| `SecurityConfig`（已有） | Spring Security 核心配置 | - 配置密码编码器 `BCryptPasswordEncoder`， 配置会话管理为无状态 `SessionCreationPolicy.STATELESS`， 配置请求白名单（如 `/login`, `/register`, `/public/`）， 添加自定义 JWT 过滤器 `JwtAuthenticationFilter`， 配置异常处理器（未登录、无权限）|
-| `CorsConfig` | 跨域配置（安全加固） | - 允许的域名列表（从配置文件读取）， 允许的 HTTP 方法（GET,POST,PUT,DELETE 等）， 允许携带凭证（Allow-Credentials） |
-| `RedisConfig` （已有） | 确保 Redis 序列化支持 JWT 相关对象 | - 配置 `RedisTemplate` 使用 Jackson 序列化， 定义 `StringRedisTemplate` 用于 Token 存储 |
-2. `com.example.ecomorder.security`
-| 类名 | 作用 | 关键属性 / 方法 |
-|------|------|----------------|
-| `JwtUtil` （已有）| JWT 工具类 | - 属性：`secret`（密钥，从配置读取）、`expiration`（过期时间 ms）， 方法：`generateToken(String username, List<String> authorities)` 生成 JWT， 方法：`getUsernameFromToken(String token)` 解析用户名， 方法：`validateToken(String token)` 验证签名及有效期 |
-| `UserDetailsServiceImpl` | 实现 `UserDetailsService`，从数据库加载用户信息 | - 方法：`loadUserByUsername(String username)` 返回 `SecurityUser` 对象， 内部查询用户表、角色表、权限表，组装权限集合 |
-| `SecurityUser` | 实现 `UserDetails` 接口，封装登录用户信息 | - 属性：`userId`, `username`, `password`, `enabled`, `accountNonLocked`, `authorities`， 实现 `getAuthorities()`, `getPassword()`, `getUsername()`, `isAccountNonLocked()` 等方法 |
-| `JwtAuthenticationFilter` | 自定义过滤器，每次请求验证 JWT | - 方法：`doFilterInternal()` 提取 Header 中的 `Authorization: Bearer <token>`， 调用 `JwtUtil` 验证并获取用户名， 从 Redis 或权限集合构建 `Authentication` 对象， 存入 `SecurityContextHolder`，放行请求 |
-3. `com.example.ecomorder.handler`
-| 类名 | 作用 | 关键方法 |
-|------|------|----------|
-| `LoginSuccessHandler` | 登录成功处理器（可配合自定义登录接口或 Security 默认过滤器） | - 方法：`onAuthenticationSuccess()` 生成 JWT，存入 Redis（key: `token:userId`），返回 Token 给前端 |
-| `LoginFailureHandler` | 登录失败处理器 | - 方法：`onAuthenticationFailure()` 记录失败次数，若超过阈值（如 5 次），将账户锁定到 Redis（`lock:username`），返回统一错误信息 |
-| `AccessDeniedHandler` | 权限不足处理器（403） | - 方法：`handle()` 返回统一 JSON 格式 `{code:403, msg:"无权限"}` |
-| `AuthenticationEntryPoint` | 未登录/Token 无效处理器（401） | - 方法：`commence()` 返回统一 JSON `{code:401, msg:"未登录或Token过期"}` |
-4. `com.example.ecomorder.controller`
-| 类名 | 作用 | 新增方法 |
-|------|------|----------|
-| `AuthController` | 认证相关接口（新增） | - `POST /login`：接收用户名密码，调用 `AuthenticationManager` 认证，成功后返回 JWT（实际 Security 可自动处理，但为方便可自定义）， `POST /logout`：从请求头获取 Token，删除 Redis 中的 Token 记录， `POST /refresh`：可选，刷新 Token |
-| `UserSecurityController` | 安全业务功能（新增或放在 UserController） | - `POST /user/password` 修改密码（需旧密码）， `POST /user/resetPassword` 重置密码（管理员调用）， `POST /user/lock` / `unlock` 锁定/解锁账户（管理员）， `GET /user/loginLogs` 查询登录日志 |
-5. 新增数据库表对应的实体和 Mapper
-| 实体类 | 作用 | 关键字段 |
-|--------|------|----------|
-| `Role` | 角色表实体 | `id`, `name` (ROLE_ADMIN / ROLE_MANAGER / ROLE_USER), `description` |
-| `Permission` | 权限表实体（可选，如不需要可简化） | `id`, `name` (如 product:delete), `description` |
-| `UserRole` | 用户角色关联实体 | `userId`, `roleId` |
-| `RolePermission` | 角色权限关联实体（可选） | `roleId`, `permissionId` |
-| `LoginLog` | 登录日志实体 | `id`, `userId`, `username`, `loginTime`, `ip`, `status` (成功/失败) |
-同时新增对应的 Mapper 接口（`RoleMapper`, `PermissionMapper`, `UserRoleMapper`, `LoginLogMapper`）及 XML 映射文件。
-二、修改原有类（适配安全框架）
-| 原类 | 修改内容 |
-|------|----------|
-| `User` 实体 | 增加字段：`enabled` (boolean)、`accountNonLocked` (boolean)、`failCount` (int)、`lastLoginTime` (Date) 等，用于账户状态管理。 |
-| `UserService` / `AuthService` | - 原有的登录方法（手动校验密码）废弃，改为调用 Spring Security 的 `AuthenticationManager`。， 新增方法：`updatePassword(userId, oldPwd, newPwd)` 使用 `BCryptPasswordEncoder` 加密新密码。， 新增方法：`resetPassword(userId, newPassword)`（管理员用）。， 新增方法：`lockAccount(userId)`, `unlockAccount(userId)` 修改数据库及清除 Redis 锁定标记。 |
-| `PermissionAspect` | - 修改切面逻辑，不再直接查询 Redis 校验 Token，而是从 `SecurityContextHolder` 获取 `Authentication` 对象，读取其中的权限列表。， 仍然保留 `@RequireLogin` 和 `@RequirePermission` 注解，但校验逻辑改为调用 Security 上下文，避免重复查询。 |
-| `application. properties` | 新增配置段： ```jwt:   secret: 你的密钥   expiration: 3600000    1小时 security:   login-failure-max-attempts: 5   login-failure-lock-duration: 1800   秒   cors-allowed-origins: http://localhost:8081 ``` |
-| `pom.xml` | 添加依赖：， `spring-boot-starter-security`， `jjwt` (0.9.1 或 0.11.5)， `javax.xml.bind` (JWT 解析需要) |
- 三、其他新增/修改
-| 组件 | 作用 | 位置 |
-|------|------|------|
-| `XssFilter` | 防 XSS 攻击，过滤请求参数中的特殊字符，进行 HTML 转义 | 新建 `com.example.ecomorder.filter.XssFilter` |
-| `XssWrapper` | 继承 `HttpServletRequestWrapper`，重写 `getParameterValues` 等方法实现参数过滤 | 新建内部类 |
-| `PasswordEncoderConfig` （可放在 SecurityConfig 内） | 定义 `BCryptPasswordEncoder` 为 Spring Bean | 已有 SecurityConfig |
-| 全局异常处理器修改 | 增加处理 `AuthenticationException`、`AccessDeniedException`，返回统一格式 | 修改原有 `GlobalExceptionHandler`（或新增） |
-五、修改流程总结
-1. 添加依赖：编辑 `pom.xml`，加入 Spring Security、JWT，重新加载 Maven。
-2. 创建安全相关类：按上述表格，在 `config`, `security`, `handler` 包中新建类。
-3. 修改用户实体及数据库：为 `User` 表增加字段，并创建角色、权限、登录日志表，运行 SQL 脚本。
-4. 实现 `UserDetailsService`：编写 `UserDetailsServiceImpl` 和 `SecurityUser`。
-5. 配置 Security：编写 `SecurityConfig`、`CorsConfig`、JWT 过滤器。
-6. 修改原有登录接口：删除旧的手动校验代码，改为调用 `AuthenticationManager` 
-7. 修改 AOP 权限切面：让 `PermissionAspect` 从 `SecurityContextHolder` 获取权限，而不是直接查 Redis。
-8. 新增安全业务接口：编写 `AuthController` 和 `UserSecurityController` 实现登录、登出、密码修改、锁定等。
+前端报错:
+系统异常: Given that there is no defaultpassword encoderconigured, each password musthave a password encoding prefix. Please either preixthis password with "nop" orset a defaul password encoderin`DelegatingPasswordEncoder
+问题描述:
+密码编码器配置与数据库中存储的密码格式不匹配，登录的时候使用之前的账号密码登陆不上去，包括新注册的账户也没办法登录
+
+这个错误,是 Spring Security 密码编码器配置与数据库中存储的密码格式不匹配导致的.前端看到的 580 错误,本质上是后端在验证登录密码时抛出的异常.
+
+错误原因分析:
+Spring Security 5.x引入了 DelegatingPasswordEncoder(委托式密码编码器)。它要求在存储密码时密码必须带有 编码方式前缀，格式为{编码ID}密码原文 。例如:
+{noop}123456表示明文密码 123456
+{bcrypt}$2a$10$...→表示 BCrypt 加密后的密文.
+当系统调用 passwordEncoder.matches(用户输入的明文，数据库中的密码)验证登录时
+1.DelegatingPasswordEncoder 会先解析数据库密码中的前缀(例如{noop})。
+2.根据前缀找到对应的真实编码器(例如 NoopPasswordEncoder)来比对
+3.如果数据库中的密码没有前缀，且你没有为 DelegatingPasswordEncoder 设置“默认编码器”，就会直接抛出你看到的这个异常。
+所以，问题出在你的数据库里存储的用户密码没有编码前缀，而 Spring Security 又恰好配置了一个“没有默认匹配器"的 DelegatingPasswordEncoder。
+
+为什么新注册用户也报错?
+“注册”逻辑虽然调用了 BCrypt 加密，但没有在结果前拼接{bcrypt}。流程是这样的:
+然后直接存1.注册时:你用了类似 new BcryptPasswordEncoder().encode("123456")，得到 $2a$18$...，入数据库。
+2.登录时:Spring Security的 DaoAuthenticationProvider 会通过 DelegatingPasswordEncoder 来验证密码。
+3.DelegatingPasswordEncoder 看到数据库里的密码是 $2a$1e$...，开头没有{编码ID}，又因为你没给它配置“默认编码器”，于是直接抛出异常。
+所以，哪怕注册流程中有加密，只要没加前缀，就一定会在这里报错
