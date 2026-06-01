@@ -14,4 +14,9 @@ public class UserListVO {
     private String email;         // 邮箱
     private String phone;         // 手机号
     private Date createTime;      // 注册时间
+    private Boolean enabled;           // 状态：启用/禁用
+    private Boolean accountNonLocked;    // 锁定：正常/已锁定
+    private Integer failCount;         // 失败次数
+    private Date lastLoginTime;        // 最后登录时间
+
 }

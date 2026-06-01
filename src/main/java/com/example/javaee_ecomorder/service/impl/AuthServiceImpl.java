@@ -56,6 +56,13 @@ public class AuthServiceImpl implements AuthService {
         List<String> authorities = authentication.getAuthorities().stream()
                 .map(a -> a.getAuthority())
                 .collect(Collectors.toList());
+        //
+        String role = authorities.stream()
+                .filter(a -> a.startsWith("ROLE_"))
+                .findFirst()
+                .orElse("ROLE_USER");
+        //
+
         String token = jwtUtil.generateToken(user.getUsername(), authorities);
         UserInfo userInfo = new UserInfo();
         userInfo.setUserId(user.getUserId());
@@ -73,6 +80,9 @@ public class AuthServiceImpl implements AuthService {
         result.setUsername(user.getUsername());
         result.setToken(token);
         result.setExpireTime(System.currentTimeMillis() + jwtUtil.getExpiration());
+        //
+        result.setRole(role);
+        //
         return result;
     }
 
@@ -114,12 +124,20 @@ public class AuthServiceImpl implements AuthService {
         String username = jwtUtil.getUsernameFromToken(token);
         List<String> authorities = jwtUtil.getAuthoritiesFromToken(token);
         String newToken = jwtUtil.generateToken(username, authorities);
+
+        String role = authorities.stream()
+                .filter(a -> a.startsWith("ROLE_"))
+                .findFirst()
+                .orElse("ROLE_USER");
+
         redisCacheUtil.set(CacheKeyPrefix.TOKEN + newToken, cached,
                 jwtUtil.getExpiration(), TimeUnit.MILLISECONDS);
         LoginResultVO result = new LoginResultVO();
         result.setUsername(username);
         result.setToken(newToken);
         result.setExpireTime(System.currentTimeMillis() + jwtUtil.getExpiration());
+        result.setRole(role);
+
         if (cached instanceof UserInfo info) {
             result.setUserId(info.getUserId());
             redisCacheUtil.set(CacheKeyPrefix.TOKEN_USER + info.getUserId(), newToken,

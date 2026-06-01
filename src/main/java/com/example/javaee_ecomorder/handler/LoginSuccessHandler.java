@@ -39,7 +39,14 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         List<String> authorities = authentication.getAuthorities().stream()
                 .map(a -> a.getAuthority())
                 .collect(Collectors.toList());
+
         String token = jwtUtil.generateToken(user.getUsername(), authorities);
+
+        String role = authorities.stream()
+                .filter(a -> a.startsWith("ROLE_"))
+                .findFirst()
+                .orElse("ROLE_USER");
+
         UserInfo userInfo = new UserInfo();
         userInfo.setUserId(user.getUserId());
         userInfo.setUsername(user.getUsername());
@@ -57,6 +64,8 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         data.put("username", user.getUsername());
         data.put("token", token);
         data.put("expireTime", System.currentTimeMillis() + jwtUtil.getExpiration());
+        data.put("role", role);
+        data.put("permissions", userInfo.getPermissions());
         body.put("data", data);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(response.getOutputStream(), body);

@@ -95,7 +95,7 @@
     </select>
 
     <select id="selectUserPage" resultType="com.example.javaee_ecomorder.vo.UserListVO">
-        SELECT u.id, u.username, u.email, u.phone, u.create_time
+        SELECT u.id, u.username, u.email, u.phone, u.create_time, u.enabled, u.account_non_locked, u.fail_count, u.last_login_time
         FROM user u
         <include refid="UserQueryWhere"/>
         ORDER BY u.id DESC
