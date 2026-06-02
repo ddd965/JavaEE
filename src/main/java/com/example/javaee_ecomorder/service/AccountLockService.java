@@ -8,6 +8,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.concurrent.TimeUnit;
+
 @Service
 public class AccountLockService {
 
@@ -18,6 +20,22 @@ public class AccountLockService {
 
     public boolean isLockedInRedis(String username) {
         return Boolean.TRUE.equals(stringRedisTemplate.hasKey(CacheKeyPrefix.LOCK + username));
+    }
+
+    public String formatRemainingLockMessage(String username) {
+        long minutes = getRemainingLockMinutes(username);
+        return minutes > 0 ? "，请" + minutes + "分钟后重试" : "";
+    }
+
+    private long getRemainingLockMinutes(String username) {
+        if (!StringUtils.hasText(username)) {
+            return 0;
+        }
+        Long ttlSeconds = stringRedisTemplate.getExpire(CacheKeyPrefix.LOCK + username, TimeUnit.SECONDS);
+        if (ttlSeconds == null || ttlSeconds <= 0) {
+            return 0;
+        }
+        return (ttlSeconds + 59) / 60;
     }
 
     /**

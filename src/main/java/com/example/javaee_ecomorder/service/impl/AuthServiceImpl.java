@@ -67,7 +67,7 @@ public class AuthServiceImpl implements AuthService {
         accountLockService.releaseExpiredLockIfNeeded(username);
         if (accountLockService.isLockedInRedis(username)) {
             recordFailedLogin(username);
-            throw new BusinessException("账户已锁定" + formatLockDuration());
+            throw new BusinessException("账户已锁定" + accountLockService.formatRemainingLockMessage(username));
         }
         Authentication authentication;
         try {
@@ -75,7 +75,7 @@ public class AuthServiceImpl implements AuthService {
                     new UsernamePasswordAuthenticationToken(username, password));
         } catch (LockedException e) {
             recordFailedLogin(username);
-            throw new BusinessException("账户已锁定" + formatLockDuration());
+            throw new BusinessException("账户已锁定" + accountLockService.formatRemainingLockMessage(username));
         } catch (BadCredentialsException e) {
             handleBadCredentials(username);
             throw new BusinessException("用户名或密码错误");
@@ -195,7 +195,7 @@ public class AuthServiceImpl implements AuthService {
         if (locked) {
             stringRedisTemplate.opsForValue().set(
                     CacheKeyPrefix.LOCK + username, "1", lockDurationSeconds, TimeUnit.SECONDS);
-            throw new BusinessException("密码错误次数过多，账户已锁定" + formatLockDuration());
+            throw new BusinessException("密码错误次数过多，账户已锁定" + accountLockService.formatRemainingLockMessage(username));
         }
         int remaining = maxAttempts - failCount;
         throw new BusinessException("用户名或密码错误，还可尝试" + remaining + "次");
@@ -204,11 +204,6 @@ public class AuthServiceImpl implements AuthService {
     private void recordFailedLogin(String username) {
         User user = userMapper.selectByUsername(username);
         saveLoginLog(user != null ? user.getId() : null, username, 0);
-    }
-
-    private String formatLockDuration() {
-        long minutes = lockDurationSeconds / 60;
-        return minutes > 0 ? "，请" + minutes + "分钟后重试" : "";
     }
 
     private void saveLoginLog(Long userId, String username, int status) {
