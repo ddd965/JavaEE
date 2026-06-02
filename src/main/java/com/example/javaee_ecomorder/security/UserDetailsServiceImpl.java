@@ -5,14 +5,13 @@ import com.example.javaee_ecomorder.entity.User;
 import com.example.javaee_ecomorder.mapper.PermissionMapper;
 import com.example.javaee_ecomorder.mapper.RoleMapper;
 import com.example.javaee_ecomorder.mapper.UserMapper;
+import com.example.javaee_ecomorder.service.AccountLockService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import com.example.javaee_ecomorder.common.CacheKeyPrefix;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -29,11 +28,12 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Autowired
     private PermissionMapper permissionMapper;
     @Autowired
-    private StringRedisTemplate stringRedisTemplate;
+    private AccountLockService accountLockService;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(CacheKeyPrefix.LOCK + username))) {
+        accountLockService.releaseExpiredLockIfNeeded(username);
+        if (accountLockService.isLockedInRedis(username)) {
             throw new LockedException("账户已锁定");
         }
         User user = userMapper.selectByUsername(username);

@@ -20,6 +20,7 @@ import com.example.javaee_ecomorder.vo.UserProfileVO;
 import com.example.javaee_ecomorder.vo.UserWithOrdersVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +45,9 @@ public class UserServiceImpl implements UserService {
     private EcomPasswordEncoder passwordEncoder;
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+
+    @Value("${security.login-failure-lock-duration:180}")
+    private long lockDurationSeconds;
 
     @Override
     public UserProfileVO getUserWithProfile(Long userId) {
@@ -162,7 +166,7 @@ public class UserServiceImpl implements UserService {
         }
         userMapper.updateAccountStatus(userId, false, 5);
         stringRedisTemplate.opsForValue().set(CacheKeyPrefix.LOCK + profile.getUsername(), "1",
-                1800, TimeUnit.SECONDS);
+                lockDurationSeconds, TimeUnit.SECONDS);
     }
 
     @Override

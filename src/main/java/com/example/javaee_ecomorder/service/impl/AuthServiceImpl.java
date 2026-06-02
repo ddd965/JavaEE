@@ -9,6 +9,7 @@ import com.example.javaee_ecomorder.mapper.LoginLogMapper;
 import com.example.javaee_ecomorder.mapper.UserMapper;
 import com.example.javaee_ecomorder.security.EcomPasswordEncoder;
 import com.example.javaee_ecomorder.security.SecurityUser;
+import com.example.javaee_ecomorder.service.AccountLockService;
 import com.example.javaee_ecomorder.service.AuthService;
 import com.example.javaee_ecomorder.utils.IpUtil;
 import com.example.javaee_ecomorder.utils.JwtUtil;
@@ -49,11 +50,13 @@ public class AuthServiceImpl implements AuthService {
     private EcomPasswordEncoder passwordEncoder;
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    private AccountLockService accountLockService;
 
     @Value("${security.login-failure-max-attempts:5}")
     private int maxAttempts;
 
-    @Value("${security.login-failure-lock-duration:1800}")
+    @Value("${security.login-failure-lock-duration:180}")
     private long lockDurationSeconds;
 
     @Override
@@ -61,7 +64,8 @@ public class AuthServiceImpl implements AuthService {
         if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
             throw new BusinessException("用户名/密码不能为空");
         }
-        if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(CacheKeyPrefix.LOCK + username))) {
+        accountLockService.releaseExpiredLockIfNeeded(username);
+        if (accountLockService.isLockedInRedis(username)) {
             recordFailedLogin(username);
             throw new BusinessException("账户已锁定" + formatLockDuration());
         }

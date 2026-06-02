@@ -30,7 +30,7 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
     @Value("${security.login-failure-max-attempts:5}")
     private int maxAttempts;
 
-    @Value("${security.login-failure-lock-duration:1800}")
+    @Value("${security.login-failure-lock-duration:180}")
     private long lockDurationSeconds;
 
     @Autowired
