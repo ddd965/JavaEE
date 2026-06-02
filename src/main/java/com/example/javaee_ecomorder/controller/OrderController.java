@@ -1,5 +1,7 @@
 package com.example.javaee_ecomorder.controller;
 
+import com.example.javaee_ecomorder.annotation.RequireLogin;
+import com.example.javaee_ecomorder.annotation.RequirePermission;
 import com.example.javaee_ecomorder.dto.OrderCreateDTO;
 import com.example.javaee_ecomorder.dto.OrderQueryDTO;
 import com.example.javaee_ecomorder.dto.OrderUpdateStatusDTO;
@@ -55,6 +57,8 @@ public class OrderController {
      * PUT /api/orders/{id}/status
      */
     @PutMapping("/{id}/status")
+    @RequireLogin
+    @RequirePermission("order:manage")
     public Result<Void> updateStatus(@PathVariable Long id,
                                      @RequestBody @Valid OrderUpdateStatusDTO dto) {
         dto.setOrderId(id);
@@ -67,6 +71,8 @@ public class OrderController {
      * DELETE /api/orders/{id}
      */
     @DeleteMapping("/{id}")
+    @RequireLogin
+    @RequirePermission("order:manage")
     public Result<Void> cancelOrder(@PathVariable Long id) {
         orderService.cancelOrder(id);
         return Result.success();

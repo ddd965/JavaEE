@@ -34,6 +34,8 @@ public class ProductController {
      * @return 统一响应
      */
     @PostMapping
+    @RequireLogin
+    @RequirePermission("product:update")
     public Result<Void> add(@RequestBody @Valid ProductAddDTO dto) {
         productService.addProduct(dto);
         return Result.success();
@@ -47,6 +49,8 @@ public class ProductController {
      * @return 统一响应
      */
     @PutMapping("/{id}")
+    @RequireLogin
+    @RequirePermission("product:update")
     public Result<Void> update(@PathVariable @NotNull Long id,
                                @RequestBody @Valid ProductUpdateDTO dto) {
         dto.setId(id);   // 将路径中的id设置到DTO中
