@@ -4,8 +4,11 @@ import com.example.javaee_ecomorder.common.CacheKeyPrefix;
 import com.example.javaee_ecomorder.dto.ProductAddDTO;
 import com.example.javaee_ecomorder.dto.ProductQueryDTO;
 import com.example.javaee_ecomorder.dto.ProductUpdateDTO;
+import com.example.javaee_ecomorder.entity.OrderItem;
 import com.example.javaee_ecomorder.entity.Product;
 import com.example.javaee_ecomorder.exception.BusinessException;
+import com.example.javaee_ecomorder.mapper.OrderItemMapper;
+import com.example.javaee_ecomorder.mapper.OrderMapper;
 import com.example.javaee_ecomorder.mapper.ProductMapper;
 import com.example.javaee_ecomorder.service.ProductService;
 import com.example.javaee_ecomorder.utils.PageResult;
@@ -29,6 +32,10 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private ProductMapper productMapper;
+    @Autowired
+    private OrderItemMapper orderItemMapper;
+    @Autowired
+    private OrderMapper orderMapper;
     @Autowired
     private RedisCacheUtil redisCacheUtil;
 
@@ -57,6 +64,13 @@ public class ProductServiceImpl implements ProductService {
         if (product == null) {
             throw new BusinessException("商品不存在");
         }
+
+        // 检查是否有订单商品引用该商品
+        List<OrderItem> orderItems = orderItemMapper.selectByProductId(id);
+        if (orderItems != null && !orderItems.isEmpty()) {
+            throw new BusinessException("该商品已被订单引用，无法删除");
+        }
+
         productMapper.deleteById(id);
         redisCacheUtil.delete(CacheKeyPrefix.PRODUCT + id);
     }

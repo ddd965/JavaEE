@@ -14,9 +14,12 @@ import com.example.javaee_ecomorder.utils.IpUtil;
 import com.example.javaee_ecomorder.utils.JwtUtil;
 import com.example.javaee_ecomorder.utils.RedisCacheUtil;
 import com.example.javaee_ecomorder.vo.LoginResultVO;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -44,13 +47,35 @@ public class AuthServiceImpl implements AuthService {
     private LoginLogMapper loginLogMapper;
     @Autowired
     private EcomPasswordEncoder passwordEncoder;
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Value("${security.login-failure-max-attempts:5}")
+    private int maxAttempts;
+
+    @Value("${security.login-failure-lock-duration:1800}")
+    private long lockDurationSeconds;
+
     @Override
     public LoginResultVO login(String username, String password) {
         if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
             throw new BusinessException("用户名/密码不能为空");
         }
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(username, password));
+        if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(CacheKeyPrefix.LOCK + username))) {
+            recordFailedLogin(username);
+            throw new BusinessException("账户已锁定" + formatLockDuration());
+        }
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(username, password));
+        } catch (LockedException e) {
+            recordFailedLogin(username);
+            throw new BusinessException("账户已锁定" + formatLockDuration());
+        } catch (BadCredentialsException e) {
+            handleBadCredentials(username);
+            throw new BusinessException("用户名或密码错误");
+        }
         SecurityUser user = (SecurityUser) authentication.getPrincipal();
         upgradePasswordIfNeeded(user.getUserId(), password, user.getPassword());
         List<String> authorities = authentication.getAuthorities().stream()
@@ -150,6 +175,36 @@ public class AuthServiceImpl implements AuthService {
         if (!passwordEncoder.isBcrypt(encodedPassword)) {
             userMapper.updatePassword(userId, passwordEncoder.encode(rawPassword));
         }
+    }
+
+    private void handleBadCredentials(String username) {
+        User user = userMapper.selectByUsername(username);
+        if (user == null) {
+            saveLoginLog(null, username, 0);
+            throw new BusinessException("用户名或密码错误");
+        }
+        int failCount = user.getFailCount() == null ? 0 : user.getFailCount();
+        failCount++;
+        boolean locked = failCount >= maxAttempts;
+        userMapper.updateAccountStatus(user.getId(), !locked, failCount);
+        saveLoginLog(user.getId(), username, 0);
+        if (locked) {
+            stringRedisTemplate.opsForValue().set(
+                    CacheKeyPrefix.LOCK + username, "1", lockDurationSeconds, TimeUnit.SECONDS);
+            throw new BusinessException("密码错误次数过多，账户已锁定" + formatLockDuration());
+        }
+        int remaining = maxAttempts - failCount;
+        throw new BusinessException("用户名或密码错误，还可尝试" + remaining + "次");
+    }
+
+    private void recordFailedLogin(String username) {
+        User user = userMapper.selectByUsername(username);
+        saveLoginLog(user != null ? user.getId() : null, username, 0);
+    }
+
+    private String formatLockDuration() {
+        long minutes = lockDurationSeconds / 60;
+        return minutes > 0 ? "，请" + minutes + "分钟后重试" : "";
     }
 
     private void saveLoginLog(Long userId, String username, int status) {
