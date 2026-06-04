@@ -1,23 +1,147 @@
-前端报错:
-系统异常: Given that there is no defaultpassword encoderconigured, each password musthave a password encoding prefix. Please either preixthis password with "nop" orset a defaul password encoderin`DelegatingPasswordEncoder
-问题描述:
-密码编码器配置与数据库中存储的密码格式不匹配，登录的时候使用之前的账号密码登陆不上去，包括新注册的账户也没办法登录
-
-这个错误,是 Spring Security 密码编码器配置与数据库中存储的密码格式不匹配导致的.前端看到的 580 错误,本质上是后端在验证登录密码时抛出的异常.
-
-错误原因分析:
-Spring Security 5.x引入了 DelegatingPasswordEncoder(委托式密码编码器)。它要求在存储密码时密码必须带有 编码方式前缀，格式为{编码ID}密码原文 。例如:
-{noop}123456表示明文密码 123456
-{bcrypt}$2a$10$...→表示 BCrypt 加密后的密文.
-当系统调用 passwordEncoder.matches(用户输入的明文，数据库中的密码)验证登录时
-1.DelegatingPasswordEncoder 会先解析数据库密码中的前缀(例如{noop})。
-2.根据前缀找到对应的真实编码器(例如 NoopPasswordEncoder)来比对
-3.如果数据库中的密码没有前缀，且你没有为 DelegatingPasswordEncoder 设置“默认编码器”，就会直接抛出你看到的这个异常。
-所以，问题出在你的数据库里存储的用户密码没有编码前缀，而 Spring Security 又恰好配置了一个“没有默认匹配器"的 DelegatingPasswordEncoder。
-
-为什么新注册用户也报错?
-“注册”逻辑虽然调用了 BCrypt 加密，但没有在结果前拼接{bcrypt}。流程是这样的:
-然后直接存1.注册时:你用了类似 new BcryptPasswordEncoder().encode("123456")，得到 $2a$18$...，入数据库。
-2.登录时:Spring Security的 DaoAuthenticationProvider 会通过 DelegatingPasswordEncoder 来验证密码。
-3.DelegatingPasswordEncoder 看到数据库里的密码是 $2a$1e$...，开头没有{编码ID}，又因为你没给它配置“默认编码器”，于是直接抛出异常。
-所以，哪怕注册流程中有加密，只要没加前缀，就一定会在这里报错
+实验四：SpringBoot自定义启动类改造与多环境分模块启
+动实验任务书
+一、实验基础信息
+1.实验名称
+SpringBoot 自定义启动类开发、项目模块化拆分与多启动入口改造实验
+2.前置条件
+已完整完成实验一（SSM+Redis前后端业务）、实验二（AOP切面增强）、实验
+三（SpringSecurity+JWT安全加固+全流程测试）全部代码与功能，项目可正常启
+动运行。
+3.开发规则
+在原有三合一项目源码上增量改造，不删除原有业务、安全、AOP、测试代码；
+保留全部数据库、配置、权限、登录、单元测试代码，仅新增/重构启动相关代
+码。
+4.分组
+沿用原有实验分组，分工：启动类开发、配置拆分、测试验证、实验报告编写。
+5.实验目的
+掌握SpringBoot原生启动原理、SpringApplication自定义配置、自定义启动器实
+现；
+完成2套自定义启动类拆分项目：主业务服务启动类、后台管理安全服务启动
+类；
+基于多启动类实现项目分模块独立启动，区分普通业务运行环境、管理员权限管
+控环境；
+结合Profile多环境配置、自定义Banner、启动参数、上下文初始化增强；
+适配原有Security、JWT、Redis、AOP、单元测试，多启动类互不干扰原有业务逻
+辑。
+二、技术栈要求
+沿用原有全栈：SpringBoot、MyBatis、Redis、SpringSecurity、JWT、AOP、J-Unit
+5、Knife4j/Swagger；
+新增技术点：SpringApplicationBuilder、@SpringBootApplication(scanBasePackages
+分包)、SpringBoot自定义Banner、@Profile环境隔离、SPI自定义初始化器Applic
+ationContextInitializer。
+AI大模型
+三、核心开发要求
+原有项目整包拆分扫描路径，划分两大模块包路径：
+com.xxx.biz：普通业务模块（商品/订单/用户基础业务、Redis缓存、常规
+CRUD）
+com.xxx.admin：管理员安全模块（Security配置、权限控制、登录鉴权、账户锁
+定、操作审计、AOP权限注解）
+以下内容可以二选一，也可以自拟启动类类型。
+1.自定义启动类1：BizApplication【普通业务启动类】
+作用：仅启动普通业务模块，不加载后台安全权限配置
+使用@SpringBootApplication(scanBasePackages = "com.xxx.biz")限定包扫描，排除
+admin安全配置；
+自定义SpringApplication构造：修改启动Banner（自定义字符banner.txt）、关闭
+冗余自动配置（排除Security自动装配）；
+绑定application-biz.yml配置文件：独立端口、独立Redis库、不加载角色权限表
+初始化；
+启动后：可正常使用基础CRUD、分页、Redis缓存、AOP请求日志，关闭登录鉴
+权、接口权限拦截，适配游客/普通业务访问。
+2.自定义启动类2：AdminApplication【后台安全管理启动类】
+作用：仅启动后台权限+安全管控模块，加载SpringSecurity+JWT全安全配置
+@SpringBootApplication(scanBasePackages = "com.xxx.admin")，仅扫描安全、权
+限、登录相关代码；
+通过SpringApplicationBuilder链式自定义启动：注册自定义上下文初始化器、项目
+启动监听器；
+绑定application-admin.yml：独立服务端口、独立数据库连接、启用密码BCrypt加
+密、登录防暴力锁定配置；
+启动后：启用完整JWT登录、三级角色权限拦截、
+AOP@RequireLogin/@RequirePermission校验、异常审计日志，可访问管理员相关
+接口。
+3.通用自定义启动增强功能（两个启动类共用可选增强）
+自定义Spring上下文初始化器（ApplicationContextInitializer）：项目启动时读
+取系统参数，动态配置Redis连接参数，写入启动日志；
+自定义项目启动监听器ApplicationListener：监听ApplicationReadyEvent，项目启
+动成功后控制台打印模块信息、Redis连接状态；
+多环境Profile区分：dev/test/prod三套yml，启动类通过@Profile("dev")绑定环
+境，不同启动类读取不同配置；
+排除自动配置：按需使用exclude={SecurityAutoConfiguration.class}在Biz启动类
+剔除安全自动配置。
+4.兼容原有一二三实验全部功能约束
+原有Mapper/Service/Controller/安全配置/AOP切面代码不做业务修改，仅通过包路
+径划分实现启动隔离；
+JWT、RedisToken存储、BCrypt密码加密、XSS/SQL注入防护、账户锁定逻辑代
+码保留不变；
+AOP五大切面（请求日志、异常、性能监控、权限注解、操作日志）根据启动类
+扫描范围自动生效；
+原有单元测试、接口测试代码保留，可分别针对两个启动类编写对应测试用例。
+5.配置文件拆分
+application.yml：公共配置（MyBatis、全局VO返回、跨域CORS公共参数）
+application-biz.yml：业务服务专属配置（server.port、redis.db、线程池）
+application-admin.yml：管理端专属配置（security配置、登录锁定阈值、swagger
+分组）
+四、项目测试要求
+1.分启动类单元测试
+分别以BizApplication、AdminApplication作为启动类运行JUnit单元测试；
+Biz启动测试：仅测试基础业务Mapper/Service，跳过权限校验相关用例；
+Admin启动测试：专项测试登录、JWT签发、权限拦截、密码加密、账户锁定用
+例；
+2.接口测试
+.
+.
+Postman分别调用两个服务不同端口接口：
+Biz服务：无需Token即可访问基础业务接口；
+Admin服务：未携带JWTToken全部接口拦截，无角色权限访问报错；
+Knife4j 分环境生成两份接口文档（业务接口文档、管理员安全接口文档）；
+3.集成测试
+先后启动两个启动类，双服务同时运行，共用一套MySQL库、不同Redis数据
+库；
+验证Redis缓存、AOP日志、事务、批量操作在两个启动环境下均正常运行。
+五、代码目录规范
+com.xxx
+──biz
+// 业务模块包（BizApplication扫描）
+──controller/service/mapper/entity
+──admin
+// 安全管理模块包（AdminApplication扫描）
+──config(Security/Cors)
+──security(Jwt 工具类)
+──filter(Jwt 过滤器)
+──annotation(AOP自定义注解)
+──aop(AOP所有切面类)
+──starter
+// 自定义启动类存放包
+──BizApplication.java
+──AdminApplication.java
+──init
+// 自定义初始化器、启动监听器
+──banner.txt // 自定义启动banner
+──common// 公共模块（全局ResultVO、工具类，两个启动类共同扫描）
+六、实验报告撰写内容（在实验1/2/3报告基础上新增）
+实验四概述：实验目的、软硬件环境、SpringBoot自定义启动原理说明；
+项目分包设计方案：包拆分结构图、两个启动类包扫描范围说明；
+自定义启动类源码：BizApplication、AdminApplication、自定义初始化器/监听器
+完整代码；
+多配置文件说明：application-biz.yml、application-admin.yml配置说明、Profile使
+用；
+功能测试截图：
+两个启动类分别启动控制台banner、启动日志截图；
+Biz服务免Token访问接口截图、Admin无Token被拦截截图；
+双项目同时启动端口占用验证、Redis不同库数据截图；
+JUnit分别选用不同启动类执行单元测试运行截图；
+问题总结：自定义启动扫描踩坑、分包冲突、配置隔离问题及解决方案；
+整体四次实验项目整体架构总结。
+七、提交资料
+完整四次实验整合项目源码（含2个自定义启动类、拆分配置、分包代码，可分
+别启动两个入口）；
+不变：原始MySQL全量SQL脚本；
+测试材料：分启动类Postman测试用例文件、单元测试运行截图包；
+整合Word实验报告（补充实验四全部内容，汇总实验1~4完整报告）。
+八、评分细则（总分100）
+两个自定义启动类规范实现+分包拆分：40分
+多环境配置、自定义banner/启动初始化增强：20分
+双服务测试验证（接口+单元+集成测试）：25分
+实验报告图文完整性、源码规范：15分
+可选拓展
+新增第三个简易测试启动类TestApplication，仅加载测试环境配置，自动启动后执
+行全部JUnit测试用例。

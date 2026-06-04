@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.javaee_ecomorder.mapper.OrderMapper">
+<mapper namespace="com.example.javaee_ecomorder.common.mapper.OrderMapper">
 
-    <resultMap id="OrderEntityMap" type="com.example.javaee_ecomorder.entity.Order">
+    <resultMap id="OrderEntityMap" type="com.example.javaee_ecomorder.common.entity.Order">
         <id column="id" property="id"/>
         <result column="order_no" property="orderNo"/>
         <result column="user_id" property="userId"/>
@@ -33,11 +33,11 @@
         WHERE id = #{id}
     </select>
 
-    <resultMap id="OrderWithProductsMap" type="com.example.javaee_ecomorder.vo.OrderWithProductsVO">
+    <resultMap id="OrderWithProductsMap" type="com.example.javaee_ecomorder.common.vo.OrderWithProductsVO">
         <id column="order_id" property="orderId"/>
         <result column="order_no" property="orderNo"/>
         <result column="total_price" property="totalPrice"/>
-        <collection property="products" ofType="com.example.javaee_ecomorder.vo.OrderProductVO">
+        <collection property="products" ofType="com.example.javaee_ecomorder.common.vo.OrderProductVO">
             <id column="product_id" property="productId"/>
             <result column="product_name" property="productName"/>
             <result column="quantity" property="quantity"/>
@@ -85,7 +85,7 @@
         </where>
     </sql>
 
-    <select id="selectOrderPage" resultType="com.example.javaee_ecomorder.vo.OrderVO">
+    <select id="selectOrderPage" resultType="com.example.javaee_ecomorder.common.vo.OrderVO">
         SELECT id            AS orderId,
                order_no      AS orderNo,
                total_price   AS totalPrice,

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.javaee_ecomorder.mapper.OrderItemMapper">
+<mapper namespace="com.example.javaee_ecomorder.common.mapper.OrderItemMapper">
 
-    <!-- 结果映射：将数据库字段与实体属性对应 -->
-    <resultMap id="BaseResultMap" type="com.example.javaee_ecomorder.entity.OrderItem">
+    <!-- 结果映射：将数据库字段与实体属性对�?-->
+    <resultMap id="BaseResultMap" type="com.example.javaee_ecomorder.common.entity.OrderItem">
         <id column="id" property="id" jdbcType="BIGINT"/>
         <result column="order_id" property="orderId" jdbcType="BIGINT"/>
         <result column="product_id" property="productId" jdbcType="BIGINT"/>
@@ -18,12 +18,12 @@
     </sql>
 
     <!-- 插入单条记录 -->
-    <insert id="insert" useGeneratedKeys="true" keyProperty="id" parameterType="com.example.javaee_ecomorder.entity.OrderItem">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" parameterType="com.example.javaee_ecomorder.common.entity.OrderItem">
         INSERT INTO order_item (order_id, product_id, quantity, subtotal)
         VALUES (#{orderId}, #{productId}, #{quantity}, #{subtotal})
     </insert>
 
-    <!-- 批量插入（使用 foreach 循环） -->
+    <!-- 批量插入（使�?foreach 循环�?-->
     <insert id="batchInsert" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO order_item (order_id, product_id, quantity, subtotal)
         VALUES
@@ -32,8 +32,8 @@
         </foreach>
     </insert>
 
-    <!-- 根据ID修改（仅更新数量和小计，一般业务中少用） -->
-    <update id="updateById" parameterType="com.example.javaee_ecomorder.entity.OrderItem">
+    <!-- 根据ID修改（仅更新数量和小计，一般业务中少用�?-->
+    <update id="updateById" parameterType="com.example.javaee_ecomorder.common.entity.OrderItem">
         UPDATE order_item
         <set>
             <if test="quantity != null">quantity = #{quantity},</if>
@@ -47,7 +47,7 @@
         DELETE FROM order_item WHERE id = #{id}
     </delete>
 
-    <!-- 根据订单ID删除所有明细 -->
+    <!-- 根据订单ID删除所有明�?-->
     <delete id="deleteByOrderId" parameterType="java.lang.Long">
         DELETE FROM order_item WHERE order_id = #{orderId}
     </delete>
@@ -59,7 +59,7 @@
         WHERE id = #{id}
     </select>
 
-    <!-- 根据订单ID查询明细列表（一对多查询的基础） -->
+    <!-- 根据订单ID查询明细列表（一对多查询的基础�?-->
     <select id="selectByOrderId" parameterType="java.lang.Long" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM order_item

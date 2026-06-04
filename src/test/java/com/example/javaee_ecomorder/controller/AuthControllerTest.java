@@ -1,7 +1,7 @@
 package com.example.javaee_ecomorder.controller;
 
-import com.example.javaee_ecomorder.service.AuthService;
-import com.example.javaee_ecomorder.vo.LoginResultVO;
+import com.example.javaee_ecomorder.admin.service.AuthService;
+import com.example.javaee_ecomorder.common.vo.LoginResultVO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;

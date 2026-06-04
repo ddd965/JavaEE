@@ -1,6 +1,6 @@
 package com.example.javaee_ecomorder.security;
 
-import com.example.javaee_ecomorder.utils.JwtUtil;
+import com.example.javaee_ecomorder.common.utils.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

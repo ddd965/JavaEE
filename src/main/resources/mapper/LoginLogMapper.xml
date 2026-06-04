@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.javaee_ecomorder.mapper.LoginLogMapper">
+<mapper namespace="com.example.javaee_ecomorder.common.mapper.LoginLogMapper">
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO login_log (user_id, username, login_time, ip, status)
         VALUES (#{userId}, #{username}, #{loginTime}, #{ip}, #{status})
     </insert>
 
-    <select id="selectByUserId" resultType="com.example.javaee_ecomorder.entity.LoginLog">
+    <select id="selectByUserId" resultType="com.example.javaee_ecomorder.common.entity.LoginLog">
         SELECT id, user_id, username, login_time, ip, status
         FROM login_log
         WHERE user_id = #{userId}

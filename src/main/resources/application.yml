@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: ecom-order
+  profiles:
+    active: biz
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.example.javaee_ecomorder.common.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

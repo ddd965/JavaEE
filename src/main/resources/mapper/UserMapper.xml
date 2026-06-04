@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.javaee_ecomorder.mapper.UserMapper">
+<mapper namespace="com.example.javaee_ecomorder.common.mapper.UserMapper">
 
     <sql id="UserQueryWhere">
         <where>
@@ -23,7 +23,7 @@
         </where>
     </sql>
 
-    <select id="selectUserWithProfile" resultType="com.example.javaee_ecomorder.vo.UserProfileVO">
+    <select id="selectUserWithProfile" resultType="com.example.javaee_ecomorder.common.vo.UserProfileVO">
         SELECT u.id,
                u.username,
                u.email,
@@ -37,7 +37,7 @@
         WHERE u.id = #{userId}
     </select>
 
-    <select id="selectByUsername" resultType="com.example.javaee_ecomorder.entity.User">
+    <select id="selectByUsername" resultType="com.example.javaee_ecomorder.common.entity.User">
         SELECT id,
                username,
                password,
@@ -94,7 +94,7 @@
         <include refid="UserQueryWhere"/>
     </select>
 
-    <select id="selectUserPage" resultType="com.example.javaee_ecomorder.vo.UserListVO">
+    <select id="selectUserPage" resultType="com.example.javaee_ecomorder.common.vo.UserListVO">
         SELECT u.id, u.username, u.email, u.phone, u.create_time, u.enabled, u.account_non_locked, u.fail_count, u.last_login_time
         FROM user u
         <include refid="UserQueryWhere"/>
@@ -102,10 +102,10 @@
         LIMIT #{offset}, #{query.pageSize}
     </select>
 
-    <resultMap id="UserWithOrdersMap" type="com.example.javaee_ecomorder.vo.UserWithOrdersVO">
+    <resultMap id="UserWithOrdersMap" type="com.example.javaee_ecomorder.common.vo.UserWithOrdersVO">
         <id column="user_id" property="userId"/>
         <result column="username" property="username"/>
-        <collection property="orders" ofType="com.example.javaee_ecomorder.vo.OrderVO">
+        <collection property="orders" ofType="com.example.javaee_ecomorder.common.vo.OrderVO">
             <id column="order_id" property="orderId"/>
             <result column="order_no" property="orderNo"/>
             <result column="total_price" property="totalPrice"/>

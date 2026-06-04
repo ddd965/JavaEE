@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.javaee_ecomorder.mapper.UserProfileMapper">
+<mapper namespace="com.example.javaee_ecomorder.common.mapper.UserProfileMapper">
 
     <!-- 通用结果映射：UserProfile 实体 -->
-    <resultMap id="BaseResultMap" type="com.example.javaee_ecomorder.entity.UserProfile">
+    <resultMap id="BaseResultMap" type="com.example.javaee_ecomorder.common.entity.UserProfile">
         <id column="id" property="id"/>
         <result column="user_id" property="userId"/>
         <result column="real_name" property="realName"/>
@@ -13,7 +13,7 @@
     </resultMap>
 
     <!-- 一对一关联结果映射：UserWithProfileVO -->
-    <resultMap id="UserWithProfileVOMap" type="com.example.javaee_ecomorder.vo.UserWithProfileVO">
+    <resultMap id="UserWithProfileVOMap" type="com.example.javaee_ecomorder.common.vo.UserWithProfileVO">
         <id column="user_id" property="userId"/>
         <result column="username" property="username"/>
         <result column="email" property="email"/>
@@ -24,7 +24,7 @@
     </resultMap>
 
     <!-- 插入 -->
-    <insert id="insert" parameterType="com.example.javaee_ecomorder.entity.UserProfile" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insert" parameterType="com.example.javaee_ecomorder.common.entity.UserProfile" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO user_profile (user_id, real_name, address, points)
         VALUES (#{userId}, #{realName}, #{address}, #{points})
     </insert>
@@ -35,7 +35,7 @@
     </delete>
 
     <!-- 更新 -->
-    <update id="update" parameterType="com.example.javaee_ecomorder.entity.UserProfile">
+    <update id="update" parameterType="com.example.javaee_ecomorder.common.entity.UserProfile">
         UPDATE user_profile
         SET real_name = #{realName},
             address = #{address},
@@ -43,14 +43,14 @@
         WHERE user_id = #{userId}
     </update>
 
-    <!-- 单表查询：根据 userId -->
+    <!-- 单表查询：根�?userId -->
     <select id="selectByUserId" resultMap="BaseResultMap">
         SELECT id, user_id, real_name, address, points
         FROM user_profile
         WHERE user_id = #{userId}
     </select>
 
-    <!-- 一对一关联查询：用户 + 扩展信息（LEFT JOIN，保证用户即使没有扩展信息也能查出） -->
+    <!-- 一对一关联查询：用�?+ 扩展信息（LEFT JOIN，保证用户即使没有扩展信息也能查出） -->
     <select id="selectUserWithProfile" resultMap="UserWithProfileVOMap">
         SELECT
             u.id AS user_id,
