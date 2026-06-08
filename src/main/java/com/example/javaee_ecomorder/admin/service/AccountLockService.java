@@ -24,7 +24,7 @@ public class AccountLockService {
 
     public String formatRemainingLockMessage(String username) {
         long minutes = getRemainingLockMinutes(username);
-        return minutes > 0 ? "，请" + minutes + "分钟后重�? : "";
+        return minutes > 0 ? "，请" + minutes + "分钟后重试" : "";
     }
 
     private long getRemainingLockMinutes(String username) {
@@ -49,7 +49,7 @@ public class AccountLockService {
     }
 
     /**
-     * Redis �?key 过期回调，同步恢复数据库
+     * Redis �?key 过期回调，同步恢复数据库
      */
     public void onLockKeyExpired(String username) {
         if (!StringUtils.hasText(username)) {

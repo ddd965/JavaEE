@@ -7,8 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 
 /**
- * 购物车更新数�?DTO
- * 用于前端传递修改购物车中某商品数量的请求参�?
+ * 购物车更新数�?DTO
+ * 用于前端传递修改购物车中某商品数量的请求参�?
  */
 @Data
 public class CartUpdateDTO implements Serializable {
@@ -31,6 +31,6 @@ public class CartUpdateDTO implements Serializable {
      * 新的商品数量
      */
     @NotNull(message = "数量不能为空")
-    @Min(value = 1, message = "商品数量至少�?")
+    @Min(value = 1, message = "商品数量至少为1")
     private Integer quantity;
 }

@@ -46,7 +46,7 @@ public class ProductServiceImpl implements ProductService {
             throw new BusinessException("商品价格必须大于0");
         }
         if (dto.getStock() < 0) {
-            throw new BusinessException("库存不能为负�?);
+            throw new BusinessException("库存不能为负数");
         }
         if (!StringUtils.hasText(dto.getName()) || dto.getName().length() > 100) {
             throw new BusinessException("商品名称不能为空且长度≤100");
@@ -62,10 +62,10 @@ public class ProductServiceImpl implements ProductService {
     public void deleteProduct(Long id) {
         Product product = productMapper.selectById(id);
         if (product == null) {
-            throw new BusinessException("商品不存�?);
+            throw new BusinessException("商品不存在");
         }
 
-        // 检查是否有订单商品引用该商�?
+        // 检查是否有订单商品引用该商�?
         List<OrderItem> orderItems = orderItemMapper.selectByProductId(id);
         if (orderItems != null && !orderItems.isEmpty()) {
             throw new BusinessException("该商品已被订单引用，无法删除");
@@ -80,7 +80,7 @@ public class ProductServiceImpl implements ProductService {
     public void updateProduct(ProductUpdateDTO dto) {
         Product exist = productMapper.selectById(dto.getId());
         if (exist == null) {
-            throw new BusinessException("商品不存�?);
+            throw new BusinessException("商品不存在");
         }
         if (dto.getPrice() != null && dto.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException("价格必须大于0");
@@ -102,7 +102,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = productMapper.selectById(id);
         if (product == null) {
             redisCacheUtil.set(cacheKey, null, 5, TimeUnit.MINUTES);
-            throw new BusinessException("商品不存�?);
+            throw new BusinessException("商品不存在");
         }
         vo = new ProductVO(product);
         redisCacheUtil.set(cacheKey, vo, 30, TimeUnit.MINUTES);
@@ -138,7 +138,7 @@ public class ProductServiceImpl implements ProductService {
             throw new BusinessException("商品ID列表不能为空");
         }
         if (status == null || (status != 0 && status != 1)) {
-            throw new BusinessException("状态值只能为0（下架）�?（上架）");
+            throw new BusinessException("状态值只能为0（下架）或1（上架）");
         }
         productMapper.batchUpdateStatus(ids, status);
         for (Long id : ids) {

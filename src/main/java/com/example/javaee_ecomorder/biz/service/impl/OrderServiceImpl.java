@@ -53,7 +53,7 @@ public class OrderServiceImpl implements OrderService {
         for (OrderCreateDTO.OrderItemDTO item : dto.getItems()) {
             Product product = productMapper.selectByIdForUpdate(item.getProductId());
             if (product == null) {
-                throw new BusinessException("商品ID " + item.getProductId() + " 不存�?);
+                throw new BusinessException("商品ID " + item.getProductId() + " 不存在");
             }
             if (product.getStock() < item.getQuantity()) {
                 throw new BusinessException("商品[" + product.getName() + "] 库存不足，当前库存：" + product.getStock());
@@ -90,7 +90,7 @@ public class OrderServiceImpl implements OrderService {
     public void cancelOrder(Long orderId) {
         Order order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new BusinessException("订单不存�?);
+            throw new BusinessException("订单不存在");
         }
         if (order.getStatus() == 0 || order.getStatus() == 1) {
             order.setStatus(4);
@@ -100,7 +100,7 @@ public class OrderServiceImpl implements OrderService {
                 productMapper.increaseStock(item.getProductId(), item.getQuantity());
             }
         } else {
-            throw new BusinessException("当前订单状态不可取�?);
+            throw new BusinessException("当前订单状态不可取消");
         }
     }
 
@@ -108,7 +108,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderDetailVO getOrderDetail(Long orderId) {
         Order order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new BusinessException("订单不存�?);
+            throw new BusinessException("订单不存在");
         }
         OrderWithProductsVO withProducts = orderMapper.selectOrderWithProducts(orderId);
         OrderDetailVO detail = new OrderDetailVO();
@@ -180,10 +180,10 @@ public class OrderServiceImpl implements OrderService {
     public void updateOrderStatus(OrderUpdateStatusDTO dto) {
         Order order = orderMapper.selectById(dto.getOrderId());
         if (order == null) {
-            throw new BusinessException("订单不存�?);
+            throw new BusinessException("订单不存在");
         }
         if (order.getStatus() == 4) {
-            throw new BusinessException("已取消订单不可修改状�?);
+            throw new BusinessException("已取消订单不可修改状态");
         }
         order.setStatus(dto.getStatus());
         orderMapper.updateById(order);

@@ -53,7 +53,7 @@ public class UserServiceImpl implements UserService {
     public UserProfileVO getUserWithProfile(Long userId) {
         UserProfileVO vo = userMapper.selectUserWithProfile(userId);
         if (vo == null) {
-            throw new BusinessException("用户不存�?);
+            throw new BusinessException("用户不存在");
         }
         return vo;
     }
@@ -62,7 +62,7 @@ public class UserServiceImpl implements UserService {
     public List<OrderVO> getUserOrders(Long userId) {
         UserWithOrdersVO vo = userMapper.selectUserWithOrders(userId);
         if (vo == null) {
-            throw new BusinessException("用户不存�?);
+            throw new BusinessException("用户不存在");
         }
         List<OrderVO> orders = vo.getOrders();
         if (orders == null || orders.isEmpty()) {
@@ -81,11 +81,11 @@ public class UserServiceImpl implements UserService {
         }
         UserProfileVO existing = userMapper.selectUserWithProfile(dto.getId());
         if (existing == null) {
-            throw new BusinessException("用户不存�?);
+            throw new BusinessException("用户不存在");
         }
         if (!Objects.equals(existing.getUsername(), dto.getUsername())
                 && userMapper.countByUsernameExcludeId(dto.getUsername(), dto.getId()) > 0) {
-            throw new BusinessException("用户名已被占�?);
+            throw new BusinessException("用户名已被占用");
         }
         User user = new User();
         user.setId(dto.getId());
@@ -96,7 +96,7 @@ public class UserServiceImpl implements UserService {
 
         UserProfile profile = profileMapper.selectByUserId(dto.getId());
         if (profile == null) {
-            throw new BusinessException("用户资料不存�?);
+            throw new BusinessException("用户资料不存在");
         }
         profile.setRealName(dto.getRealName());
         profile.setAddress(dto.getAddress());
@@ -142,10 +142,10 @@ public class UserServiceImpl implements UserService {
     public void updatePassword(Long userId, String oldPwd, String newPwd) {
         User user = userMapper.selectByUsername(findUsernameById(userId));
         if (user == null) {
-            throw new BusinessException("用户不存�?);
+            throw new BusinessException("用户不存在");
         }
         if (!passwordEncoder.matches(oldPwd, user.getPassword())) {
-            throw new BusinessException("原密码错�?);
+            throw new BusinessException("原密码错误");
         }
         userMapper.updatePassword(userId, passwordEncoder.encode(newPwd));
     }
@@ -153,7 +153,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void resetPassword(Long userId, String newPassword) {
         if (userMapper.selectUserWithProfile(userId) == null) {
-            throw new BusinessException("用户不存�?);
+            throw new BusinessException("用户不存在");
         }
         userMapper.updatePassword(userId, passwordEncoder.encode(newPassword));
     }
@@ -162,7 +162,7 @@ public class UserServiceImpl implements UserService {
     public void lockAccount(Long userId) {
         UserProfileVO profile = userMapper.selectUserWithProfile(userId);
         if (profile == null) {
-            throw new BusinessException("用户不存�?);
+            throw new BusinessException("用户不存在");
         }
         userMapper.updateAccountStatus(userId, false, 5);
         stringRedisTemplate.opsForValue().set(CacheKeyPrefix.LOCK + profile.getUsername(), "1",
@@ -173,7 +173,7 @@ public class UserServiceImpl implements UserService {
     public void unlockAccount(Long userId) {
         UserProfileVO profile = userMapper.selectUserWithProfile(userId);
         if (profile == null) {
-            throw new BusinessException("用户不存�?);
+            throw new BusinessException("用户不存在");
         }
         userMapper.updateAccountStatus(userId, true, 0);
         stringRedisTemplate.delete(CacheKeyPrefix.LOCK + profile.getUsername());
@@ -187,7 +187,7 @@ public class UserServiceImpl implements UserService {
     private String findUsernameById(Long userId) {
         UserProfileVO vo = userMapper.selectUserWithProfile(userId);
         if (vo == null) {
-            throw new BusinessException("用户不存�?);
+            throw new BusinessException("用户不存在");
         }
         return vo.getUsername();
     }

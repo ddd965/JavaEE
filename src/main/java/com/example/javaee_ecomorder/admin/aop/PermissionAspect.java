@@ -130,7 +130,7 @@ public class PermissionAspect {
 
         if (owned == null || owned.isEmpty()) {
 
-            throw new PermissionDeniedException("无操作权�?);
+            throw new PermissionDeniedException("无操作权限");
 
         }
 
@@ -138,7 +138,7 @@ public class PermissionAspect {
 
             if (!owned.contains(perm)) {
 
-                throw new PermissionDeniedException("缺少权限�? + perm);
+                throw new PermissionDeniedException("缺少权限" + perm);
 
             }
 

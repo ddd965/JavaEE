@@ -34,11 +34,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         accountLockService.releaseExpiredLockIfNeeded(username);
         if (accountLockService.isLockedInRedis(username)) {
-            throw new LockedException("账户已锁�?);
+            throw new LockedException("账户已锁定");
         }
         User user = userMapper.selectByUsername(username);
         if (user == null) {
-            throw new UsernameNotFoundException("用户不存�?);
+            throw new UsernameNotFoundException("用户不存在");
         }
         boolean enabled = user.getEnabled() == null || user.getEnabled();
         boolean accountNonLocked = user.getAccountNonLocked() == null || user.getAccountNonLocked();

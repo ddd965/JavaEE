@@ -25,7 +25,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         Map<String, Object> body = new HashMap<>();
         body.put("code", StatusCode.FORBIDDEN);
-        body.put("msg", "无权�?);
+        body.put("msg", "无权访问");
         objectMapper.writeValue(response.getOutputStream(), body);
     }
 }

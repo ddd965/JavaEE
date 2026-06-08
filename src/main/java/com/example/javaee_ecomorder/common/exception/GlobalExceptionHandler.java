@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public Result<Void> handleAuthenticationException(AuthenticationException e) {
         if (e instanceof LockedException) {
-            return Result.error("账户已锁�?);
+            return Result.error("账户已锁定");
         }
         if (e instanceof BadCredentialsException) {
             return Result.error("用户名或密码错误");
@@ -43,20 +43,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public Result<Void> handleAccessDeniedException(AccessDeniedException e) {
-        return Result.forbidden("无权�?);
+        return Result.forbidden("无权限");
     }
 
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception e) {
         e.printStackTrace();
-        return Result.error("系统异常�? + e.getMessage());
+        return Result.error("系统异常：" + e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public Result<Void> handleValidationExceptions(MethodArgumentNotValidException ex) {
         String errorMsg = ex.getBindingResult().getAllErrors().stream()
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)
-                .collect(Collectors.joining("�?));
+                .collect(Collectors.joining("；"));
         return Result.error(errorMsg);
     }
 }

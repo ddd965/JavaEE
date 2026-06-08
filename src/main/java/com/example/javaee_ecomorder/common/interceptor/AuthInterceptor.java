@@ -38,7 +38,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
         Object cached = redisCacheUtil.get(CacheKeyPrefix.TOKEN + token);
         if (cached == null) {
-            throw new UnauthorizedException("登录已过期，请重新登�?);
+            throw new UnauthorizedException("登录已过期，请重新登录");
         }
         Long userId = extractUserId(cached);
         request.setAttribute("userId", userId);

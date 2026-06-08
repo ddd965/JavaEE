@@ -15,7 +15,7 @@ public class ProductAddDTO {
     private BigDecimal price;
 
     @NotNull(message = "库存不能为空")
-    @Min(value = 0, message = "库存不能为负�?)
+    @Min(value = 0, message = "库存不能为负数")
     private Integer stock;
 
     @NotBlank(message = "分类不能为空")

@@ -5,11 +5,11 @@ import lombok.Getter;
 @Getter
 public enum OrderStatusEnum {
 
-    PENDING(0, "待支�?),
-    PAID(1, "已支�?),
-    SHIPPED(2, "已发�?),
-    COMPLETED(3, "已完�?),
-    CANCELLED(4, "已取�?);
+    PENDING(0, "待支付"),
+    PAID(1, "已支付"),
+    SHIPPED(2, "已发货"),
+    COMPLETED(3, "已完成"),
+    CANCELLED(4, "已取消");
 
     private final int code;
     private final String desc;
@@ -21,14 +21,14 @@ public enum OrderStatusEnum {
 
     public static String getDesc(Integer status) {
         if (status == null) {
-            return "未知状�?;
+            return "未知状态";
         }
         for (OrderStatusEnum value : values()) {
             if (value.code == status) {
                 return value.desc;
             }
         }
-        return "未知状�?;
+        return "未知状态";
     }
 
     public static OrderStatusEnum of(Integer status) {

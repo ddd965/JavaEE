@@ -60,7 +60,7 @@ public class CartServiceImpl implements CartService {
             throw new BusinessException("购物车中不存在该商品");
         }
         if (dto.getQuantity() < 1) {
-            throw new BusinessException("数量必须�?");
+            throw new BusinessException("数量必须≥1");
         }
         cartMapper.updateQuantity(cart.getId(), dto.getQuantity());
         evictCartCache(dto.getUserId());
