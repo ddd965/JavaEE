@@ -9,7 +9,8 @@ import java.util.List;
 @Mapper
 public interface ProductMapper {
 
-    // 插入商品（返回自增主键自动回填到 Product.id�?    int insert(Product product);
+    // 插入商品（返回自增主键自动回填到 Product.id）
+    int insert(Product product);
 
     // 根据主键更新
     int updateById(Product product);

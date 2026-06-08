@@ -65,7 +65,7 @@ public class ProductServiceImpl implements ProductService {
             throw new BusinessException("商品不存在");
         }
 
-        // 检查是否有订单商品引用该商�?
+        // 检查是否有订单商品引用该商品
         List<OrderItem> orderItems = orderItemMapper.selectByProductId(id);
         if (orderItems != null && !orderItems.isEmpty()) {
             throw new BusinessException("该商品已被订单引用，无法删除");
