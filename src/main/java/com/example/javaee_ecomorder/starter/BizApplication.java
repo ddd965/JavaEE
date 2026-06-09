@@ -5,22 +5,23 @@ import com.example.javaee_ecomorder.init.EcomReadyListener;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FilterType;
 
-@SpringBootApplication(
-        scanBasePackages = {
-                "com.example.javaee_ecomorder.biz",
-                "com.example.javaee_ecomorder.common"
-        },
-        exclude = {
-                SecurityAutoConfiguration.class,
-                UserDetailsServiceAutoConfiguration.class
-        }
+@Configuration
+@EnableAutoConfiguration
+@ComponentScan(
+        basePackages = "com.example.javaee_ecomorder",
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.REGEX,
+                pattern = "com\\.example\\.javaee_ecomorder\\.admin\\..*"
+        )
 )
 @MapperScan("com.example.javaee_ecomorder.common.mapper")
 public class BizApplication {
+
     public static void main(String[] args) {
         SpringApplication app = new SpringApplication(BizApplication.class);
         app.setAdditionalProfiles("biz");
