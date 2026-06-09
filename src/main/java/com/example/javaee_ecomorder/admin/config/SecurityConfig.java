@@ -2,7 +2,7 @@ package com.example.javaee_ecomorder.admin.config;
 
 import com.example.javaee_ecomorder.admin.handler.JwtAccessDeniedHandler;
 import com.example.javaee_ecomorder.admin.handler.JwtAuthenticationEntryPoint;
-import com.example.javaee_ecomorder.admin.security.EcomPasswordEncoder;
+import com.example.javaee_ecomorder.common.security.EcomPasswordEncoder;
 import com.example.javaee_ecomorder.admin.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;

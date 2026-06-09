@@ -4,7 +4,7 @@ package com.example.javaee_ecomorder.biz.controller;
 import com.example.javaee_ecomorder.common.dto.UserQueryDTO;
 import com.example.javaee_ecomorder.common.dto.UserRegisterDTO;
 import com.example.javaee_ecomorder.common.dto.UserUpdateDTO;
-import com.example.javaee_ecomorder.biz.service.UserService;
+import com.example.javaee_ecomorder.common.service.UserService;
 import com.example.javaee_ecomorder.common.utils.PageResult;
 import com.example.javaee_ecomorder.common.utils.Result;
 import com.example.javaee_ecomorder.common.vo.OrderVO;

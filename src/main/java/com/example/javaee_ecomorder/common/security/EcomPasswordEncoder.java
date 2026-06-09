@@ -1,4 +1,4 @@
-package com.example.javaee_ecomorder.admin.security;
+package com.example.javaee_ecomorder.common.security;
 
 import com.example.javaee_ecomorder.common.utils.EncryptUtil;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;

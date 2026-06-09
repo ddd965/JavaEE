@@ -1,4 +1,4 @@
-package com.example.javaee_ecomorder.biz.service;
+package com.example.javaee_ecomorder.common.service;
 
 import com.example.javaee_ecomorder.common.dto.UserQueryDTO;
 import com.example.javaee_ecomorder.common.dto.UserRegisterDTO;

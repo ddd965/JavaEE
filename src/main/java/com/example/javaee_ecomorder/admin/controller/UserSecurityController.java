@@ -2,7 +2,7 @@ package com.example.javaee_ecomorder.admin.controller;
 
 import com.example.javaee_ecomorder.admin.annotation.RequirePermission;
 import com.example.javaee_ecomorder.common.entity.LoginLog;
-import com.example.javaee_ecomorder.biz.service.UserService;
+import com.example.javaee_ecomorder.common.service.UserService;
 import com.example.javaee_ecomorder.common.utils.Result;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

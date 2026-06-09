@@ -1,4 +1,4 @@
-package com.example.javaee_ecomorder.biz.service.impl;
+package com.example.javaee_ecomorder.common.service.impl;
 
 import com.example.javaee_ecomorder.common.basic.CacheKeyPrefix;
 import com.example.javaee_ecomorder.common.dto.UserQueryDTO;
@@ -11,8 +11,8 @@ import com.example.javaee_ecomorder.common.exception.BusinessException;
 import com.example.javaee_ecomorder.common.mapper.LoginLogMapper;
 import com.example.javaee_ecomorder.common.mapper.UserMapper;
 import com.example.javaee_ecomorder.common.mapper.UserProfileMapper;
-import com.example.javaee_ecomorder.admin.security.EcomPasswordEncoder;
-import com.example.javaee_ecomorder.biz.service.UserService;
+import com.example.javaee_ecomorder.common.security.EcomPasswordEncoder;
+import com.example.javaee_ecomorder.common.service.UserService;
 import com.example.javaee_ecomorder.common.utils.PageResult;
 import com.example.javaee_ecomorder.common.vo.OrderVO;
 import com.example.javaee_ecomorder.common.vo.UserListVO;

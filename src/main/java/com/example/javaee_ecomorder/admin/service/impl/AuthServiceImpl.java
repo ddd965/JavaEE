@@ -7,7 +7,7 @@ import com.example.javaee_ecomorder.common.entity.User;
 import com.example.javaee_ecomorder.common.exception.BusinessException;
 import com.example.javaee_ecomorder.common.mapper.LoginLogMapper;
 import com.example.javaee_ecomorder.common.mapper.UserMapper;
-import com.example.javaee_ecomorder.admin.security.EcomPasswordEncoder;
+import com.example.javaee_ecomorder.common.security.EcomPasswordEncoder;
 import com.example.javaee_ecomorder.admin.security.SecurityUser;
 import com.example.javaee_ecomorder.admin.service.AccountLockService;
 import com.example.javaee_ecomorder.admin.service.AuthService;
@@ -62,12 +62,12 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResultVO login(String username, String password) {
         if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
-            throw new BusinessException("用户名/密码不能为空");
+            throw new BusinessException("用户�?密码不能为空");
         }
         accountLockService.releaseExpiredLockIfNeeded(username);
         if (accountLockService.isLockedInRedis(username)) {
             recordFailedLogin(username);
-            throw new BusinessException("账户已锁定" + accountLockService.formatRemainingLockMessage(username));
+            throw new BusinessException("账户已锁�? + accountLockService.formatRemainingLockMessage(username));
         }
         Authentication authentication;
         try {
@@ -75,7 +75,7 @@ public class AuthServiceImpl implements AuthService {
                     new UsernamePasswordAuthenticationToken(username, password));
         } catch (LockedException e) {
             recordFailedLogin(username);
-            throw new BusinessException("账户已锁定" + accountLockService.formatRemainingLockMessage(username));
+            throw new BusinessException("账户已锁�? + accountLockService.formatRemainingLockMessage(username));
         } catch (BadCredentialsException e) {
             handleBadCredentials(username);
             throw new BusinessException("用户名或密码错误");
@@ -147,7 +147,7 @@ public class AuthServiceImpl implements AuthService {
         }
         Object cached = redisCacheUtil.get(CacheKeyPrefix.TOKEN + token);
         if (cached == null) {
-            throw new BusinessException("登录已过期，请重新登录");
+            throw new BusinessException("登录已过期，请重新登�?);
         }
         logout(token);
         String username = jwtUtil.getUsernameFromToken(token);
@@ -198,7 +198,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("密码错误次数过多，账户已锁定" + accountLockService.formatRemainingLockMessage(username));
         }
         int remaining = maxAttempts - failCount;
-        throw new BusinessException("用户名或密码错误，还可尝试 "+ remaining + "次");
+        throw new BusinessException("用户名或密码错误，还可尝�?"+ remaining + "�?);
     }
 
     private void recordFailedLogin(String username) {
