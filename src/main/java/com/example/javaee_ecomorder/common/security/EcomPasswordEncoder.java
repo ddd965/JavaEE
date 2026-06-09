@@ -6,7 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
- * 兼容历史 MD5 密码，新密码使用 BCrypt�?
+ * 兼容历史 MD5 密码，新密码使用 BCrypt 加密
  */
 @Component
 public class EcomPasswordEncoder implements PasswordEncoder {

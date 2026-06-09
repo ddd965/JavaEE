@@ -29,7 +29,7 @@ public class CartVO {
     private BigDecimal totalAmount;
 
     /**
-     * 购物车内商品种类数（去重后的商品个数�?
+     * 购物车内商品种类数（去重后的商品个数）
      */
     private Integer totalSkuCount;
 }

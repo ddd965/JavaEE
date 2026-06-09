@@ -8,5 +8,5 @@ import java.util.List;
 public class UserWithOrdersVO {
     private Long userId;
     private String username;
-    private List<OrderVO> orders;   // 一对多，订单列�?
+        private List<OrderVO> orders;   // 一对多，订单列表
 }

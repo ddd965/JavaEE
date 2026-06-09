@@ -13,8 +13,8 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
- * 加密工具�?
- * 提供 MD5、SHA-256、Base64、AES、BCrypt 等常用加�?解密方法
+ * 加密工具类
+ * 提供 MD5、SHA-256、Base64、AES、BCrypt 等常用加�?解密方法
  */
 public class EncryptUtil {
 
@@ -24,8 +24,8 @@ public class EncryptUtil {
 
     /**
      * MD5 散列（不可逆）
-     * @param plainText 原始字符�?
-     * @return 32位十六进�?MD5 �?
+     * @param plainText 原始字符串
+     * @return 32位十六进制字符串（MD5 哈希值）
      */
     public static String md5(String plainText) {
         try {
@@ -33,14 +33,14 @@ public class EncryptUtil {
             byte[] digest = md.digest(plainText.getBytes(StandardCharsets.UTF_8));
             return bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("MD5算法不存�?, e);
+            throw new RuntimeException("MD5算法不存在", e);
         }
     }
 
     /**
      * SHA-256 散列（不可逆）
-     * @param plainText 原始字符�?
-     * @return 64位十六进�?SHA-256 �?
+     * @param plainText 原始字符串
+     * @return 64位十六进制字符串（SHA-256 哈希值）
      */
     public static String sha256(String plainText) {
         try {
@@ -48,14 +48,14 @@ public class EncryptUtil {
             byte[] digest = md.digest(plainText.getBytes(StandardCharsets.UTF_8));
             return bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256算法不存�?, e);
+            throw new RuntimeException("SHA-256算法不存在", e);
         }
     }
 
     /**
      * Base64 编码
      * @param data 原始字节数组
-     * @return Base64 字符�?
+     * @return Base64 字符串   
      */
     public static String base64Encode(byte[] data) {
         return Base64.getEncoder().encodeToString(data);
@@ -63,7 +63,7 @@ public class EncryptUtil {
 
     /**
      * Base64 解码
-     * @param base64Str Base64 字符�?
+     * @param base64Str Base64 字符串   
      * @return 原始字节数组
      */
     public static byte[] base64Decode(String base64Str) {
@@ -71,7 +71,7 @@ public class EncryptUtil {
     }
 
     /**
-     * 生成 AES 密钥�?56位）
+     * 生成 AES 密钥（256位）
      * @return Base64 编码的密钥字符串
      */
     public static String generateAESKey() {
@@ -87,9 +87,9 @@ public class EncryptUtil {
 
     /**
      * AES 加密
-     * @param plainText 明文
-     * @param base64Key  Base64 编码�?AES 密钥�?28/192/256位）
-     * @return Base64 编码的密�?
+     * @param plainText 明文字符串
+     * @param base64Key  Base64 编码的AES 密钥（28/192/256位）  
+     * @return Base64 编码的密文字符串
      */
     public static String aesEncrypt(String plainText, String base64Key) {
         try {
@@ -106,9 +106,9 @@ public class EncryptUtil {
 
     /**
      * AES 解密
-     * @param cipherText Base64 编码的密�?
-     * @param base64Key  Base64 编码�?AES 密钥
-     * @return 明文字符�?
+     * @param cipherText Base64 编码的密文字符串
+     * @param base64Key  Base64 编码的AES 密钥（28/192/256位）
+     * @return 明文字符串
      */
     public static String aesDecrypt(String cipherText, String base64Key) {
         try {
@@ -126,7 +126,7 @@ public class EncryptUtil {
     /**
      * BCrypt 密码加密（推荐用于用户密码存储）
      * @param rawPassword 原始密码
-     * @return 加密后的哈希值（含盐�?
+     * @return 加密后的哈希值（含盐）
      */
     public static String bcryptEncode(String rawPassword) {
         return BCryptEncoder.encode(rawPassword);
@@ -135,7 +135,7 @@ public class EncryptUtil {
     /**
      * BCrypt 密码验证
      * @param rawPassword      原始密码（用户输入）
-     * @param encodedPassword 存储的加密哈�?
+     * @param encodedPassword 存储的加密哈希值
      * @return 是否匹配
      */
     public static boolean bcryptMatch(String rawPassword, String encodedPassword) {
@@ -145,7 +145,7 @@ public class EncryptUtil {
     /**
      * 字节数组转十六进制字符串
      * @param bytes 字节数组
-     * @return 十六进制字符�?
+     * @return 十六进制字符串
      */
     private static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();

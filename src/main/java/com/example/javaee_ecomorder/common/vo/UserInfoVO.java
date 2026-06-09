@@ -13,19 +13,25 @@ import java.util.Date;
 @NoArgsConstructor
 public class UserInfoVO {
 
-    // 用户基本信息（来�?user 表）
+    // 用户基本信息（来自 user 表）
     private Long id;                // 用户ID
-    private String username;        // 用户�?    private String email;           // 邮箱
-    private String phone;           // 手机�?    private Date createTime;        // 注册时间
+    private String username;        // 用户名
+    private String email;           // 邮箱
+    private String phone;           // 手机号
+    private Date createTime;        // 注册时间
 
-    // 用户扩展信息（来�?user_profile 表，一对一关系�?    private String realName;        // 真实姓名
+    // 用户扩展信息（来自 user_profile 表，一对一关系）
+    private String realName;        // 真实姓名
     private String address;         // 收货地址
     private Integer points;         // 积分
 
     /**
-     * 便捷构造方法（用于 Service 层快速创�?VO�?     * @param id 用户ID
-     * @param username 用户�?     * @param email 邮箱
-     * @param phone 手机�?     * @param createTime 注册时间
+     * 便捷构造方法（用于 Service 层快速创建 UserInfoVO）
+     * @param id 用户ID
+     * @param username 用户名
+     * @param email 邮箱
+     * @param phone 手机号
+     * @param createTime 注册时间
      * @param realName 真实姓名
      * @param address 收货地址
      * @param points 积分

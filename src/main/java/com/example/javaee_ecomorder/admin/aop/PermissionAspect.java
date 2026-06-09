@@ -1,59 +1,32 @@
 package com.example.javaee_ecomorder.admin.aop;
 
-
-
-import com.example.javaee_ecomorder.admin.annotation.RequireLogin;
-
 import com.example.javaee_ecomorder.admin.annotation.RequirePermission;
-
 import com.example.javaee_ecomorder.common.context.UserContext;
-
 import com.example.javaee_ecomorder.common.context.UserInfo;
-
 import com.example.javaee_ecomorder.common.exception.PermissionDeniedException;
-
 import com.example.javaee_ecomorder.common.exception.UnauthorizedException;
-
 import com.example.javaee_ecomorder.admin.security.SecurityUser;
-
 import org.aspectj.lang.ProceedingJoinPoint;
-
 import org.aspectj.lang.annotation.Around;
-
 import org.aspectj.lang.annotation.Aspect;
-
 import org.aspectj.lang.reflect.MethodSignature;
-
 import org.springframework.core.annotation.Order;
-
 import org.springframework.security.core.Authentication;
-
 import org.springframework.security.core.GrantedAuthority;
-
 import org.springframework.security.core.context.SecurityContextHolder;
-
 import org.springframework.stereotype.Component;
-
 import org.springframework.web.context.request.RequestContextHolder;
-
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-
-
 import java.lang.reflect.Method;
-
 import java.util.List;
-
 import java.util.stream.Collectors;
 
 
 
 @Aspect
-
 @Component
-
 @Order(1)
-
 public class PermissionAspect {
 
 

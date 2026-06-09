@@ -49,7 +49,8 @@ public class AccountLockService {
     }
 
     /**
-     * Redis �?key 过期回调，同步恢复数据库
+     * Redis 锁key 过期回调，同步恢复数据库锁定状态
+     * @param username 用户名
      */
     public void onLockKeyExpired(String username) {
         if (!StringUtils.hasText(username)) {
