@@ -15,6 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class AdminApplication {
     public static void main(String[] args) {
         SpringApplication app = new SpringApplication(AdminApplication.class);
+        app.setAdditionalProfiles("admin");
         app.setBannerMode(Banner.Mode.CONSOLE);
         app.addInitializers(new EcomContextInitializer());
         app.addListeners(new EcomReadyListener());

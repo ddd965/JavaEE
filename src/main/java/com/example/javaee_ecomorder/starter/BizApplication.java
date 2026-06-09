@@ -15,6 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class BizApplication {
     public static void main(String[] args) {
         SpringApplication app = new SpringApplication(BizApplication.class);
+        app.setAdditionalProfiles("biz");
         app.setBannerMode(Banner.Mode.CONSOLE);
         app.addInitializers(new EcomContextInitializer());
         app.addListeners(new EcomReadyListener());

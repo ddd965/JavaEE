@@ -3,12 +3,14 @@ package com.example.javaee_ecomorder.common.listener;
 import com.example.javaee_ecomorder.common.basic.CacheKeyPrefix;
 import com.example.javaee_ecomorder.admin.service.AccountLockService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.listener.KeyExpirationEventMessageListener;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnBean(AccountLockService.class)
 public class LockKeyExpirationListener extends KeyExpirationEventMessageListener {
 
     @Autowired
