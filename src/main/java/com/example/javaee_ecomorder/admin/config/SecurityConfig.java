@@ -36,6 +36,11 @@ public class SecurityConfig {
     private CorsConfigurationSource corsConfigurationSource;
 
     @Bean
+    public EcomPasswordEncoder ecomPasswordEncoder() {
+        return new EcomPasswordEncoder();
+    }
+
+    @Bean
     public PasswordEncoder passwordEncoder(EcomPasswordEncoder ecomPasswordEncoder) {
         return ecomPasswordEncoder;
     }

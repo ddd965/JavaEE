@@ -3,12 +3,10 @@ package com.example.javaee_ecomorder.common.security;
 import com.example.javaee_ecomorder.common.utils.EncryptUtil;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
 
 /**
  * 兼容历史 MD5 密码，新密码使用 BCrypt 加密
  */
-@Component
 public class EcomPasswordEncoder implements PasswordEncoder {
 
     private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
