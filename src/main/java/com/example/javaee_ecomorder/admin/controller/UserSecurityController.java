@@ -1,6 +1,6 @@
 package com.example.javaee_ecomorder.admin.controller;
 
-import com.example.javaee_ecomorder.admin.annotation.RequirePermission;
+import com.example.javaee_ecomorder.common.annotation.RequirePermission;
 import com.example.javaee_ecomorder.common.entity.LoginLog;
 import com.example.javaee_ecomorder.common.service.UserService;
 import com.example.javaee_ecomorder.common.utils.Result;

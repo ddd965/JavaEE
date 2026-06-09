@@ -1,7 +1,7 @@
 package com.example.javaee_ecomorder.biz.controller;
 
-import com.example.javaee_ecomorder.admin.annotation.RequireLogin;
-import com.example.javaee_ecomorder.admin.annotation.RequirePermission;
+import com.example.javaee_ecomorder.common.annotation.RequireLogin;
+import com.example.javaee_ecomorder.common.annotation.RequirePermission;
 import com.example.javaee_ecomorder.common.dto.OrderCreateDTO;
 import com.example.javaee_ecomorder.common.dto.OrderQueryDTO;
 import com.example.javaee_ecomorder.common.dto.OrderUpdateStatusDTO;
@@ -23,7 +23,7 @@ public class OrderController {
     private OrderService orderService;
 
     /**
-     * 创建订单（涉及库存扣减、生成订单明细，事务操作�?
+     * 创建订单（涉及库存扣减、生成订单明细，事务操作�?
      * POST /api/orders
      */
     @PostMapping

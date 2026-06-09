@@ -1,6 +1,6 @@
 package com.example.javaee_ecomorder.admin.aop;
 
-import com.example.javaee_ecomorder.admin.annotation.RequirePermission;
+import com.example.javaee_ecomorder.common.annotation.RequirePermission;
 import com.example.javaee_ecomorder.common.context.UserContext;
 import com.example.javaee_ecomorder.common.context.UserInfo;
 import com.example.javaee_ecomorder.common.exception.PermissionDeniedException;
@@ -31,9 +31,8 @@ public class PermissionAspect {
 
 
 
-    @Around("@annotation(com.example.javaee_ecomorder.admin.annotation.RequireLogin) "
-
-            + "|| @annotation(com.example.javaee_ecomorder.admin.annotation.RequirePermission)")
+    @Around("@annotation(com.example.javaee_ecomorder.common.annotation.RequireLogin) "
+            + "|| @annotation(com.example.javaee_ecomorder.common.annotation.RequirePermission)")
 
     public Object checkPermission(ProceedingJoinPoint joinPoint) throws Throwable {
 

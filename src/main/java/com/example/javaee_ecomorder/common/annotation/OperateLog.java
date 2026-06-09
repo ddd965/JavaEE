@@ -1,4 +1,4 @@
-package com.example.javaee_ecomorder.admin.annotation;
+package com.example.javaee_ecomorder.common.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,5 +7,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RequireLogin {
+public @interface OperateLog {
+    String module();
+    String type();
 }

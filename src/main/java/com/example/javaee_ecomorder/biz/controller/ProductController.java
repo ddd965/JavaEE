@@ -1,10 +1,10 @@
 package com.example.javaee_ecomorder.biz.controller;
 
-import com.example.javaee_ecomorder.admin.annotation.CacheRedis;
-import com.example.javaee_ecomorder.admin.annotation.OperateLog;
-import com.example.javaee_ecomorder.admin.annotation.PerfMonitor;
-import com.example.javaee_ecomorder.admin.annotation.RequireLogin;
-import com.example.javaee_ecomorder.admin.annotation.RequirePermission;
+import com.example.javaee_ecomorder.common.annotation.CacheRedis;
+import com.example.javaee_ecomorder.common.annotation.OperateLog;
+import com.example.javaee_ecomorder.common.annotation.PerfMonitor;
+import com.example.javaee_ecomorder.common.annotation.RequireLogin;
+import com.example.javaee_ecomorder.common.annotation.RequirePermission;
 import com.example.javaee_ecomorder.common.dto.ProductAddDTO;
 import com.example.javaee_ecomorder.common.dto.ProductQueryDTO;
 import com.example.javaee_ecomorder.common.dto.ProductUpdateDTO;
@@ -21,7 +21,7 @@ import jakarta.validation.constraints.NotNull;
 
 @RestController
 @RequestMapping("/products")   // 资源路径
-@Validated                   // 开启方法级别参数校�?
+@Validated                   // 开启方法级别参数校�?
 public class ProductController {
 
     @Autowired
@@ -53,7 +53,7 @@ public class ProductController {
     @RequirePermission("product:update")
     public Result<Void> update(@PathVariable @NotNull Long id,
                                @RequestBody @Valid ProductUpdateDTO dto) {
-        dto.setId(id);   // 将路径中的id设置到DTO�?
+        dto.setId(id);   // 将路径中的id设置到DTO�?
         productService.updateProduct(dto);
         return Result.success();
     }
@@ -75,7 +75,7 @@ public class ProductController {
     }
 
     /**
-     * 根据ID查询商品详情（会走Redis缓存�?
+     * 根据ID查询商品详情（会走Redis缓存�?
      * GET /api/products/{id}
      * @param id 商品ID
      * @return 商品VO

@@ -1,6 +1,6 @@
 package com.example.javaee_ecomorder.common.aop;
 
-import com.example.javaee_ecomorder.admin.annotation.PerfMonitor;
+import com.example.javaee_ecomorder.common.annotation.PerfMonitor;
 import com.example.javaee_ecomorder.common.config.EcomAopProperties;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;

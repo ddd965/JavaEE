@@ -14,7 +14,7 @@ import java.util.Base64;
 
 /**
  * 加密工具类
- * 提供 MD5、SHA-256、Base64、AES、BCrypt 等常用加�?解密方法
+ * 提供 MD5、SHA-256、Base64、AES、BCrypt 等常用加解密方法
  */
 public class EncryptUtil {
 

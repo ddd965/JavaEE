@@ -1,6 +1,6 @@
 package com.example.javaee_ecomorder.common.aop;
 
-import com.example.javaee_ecomorder.admin.annotation.CacheRedis;
+import com.example.javaee_ecomorder.common.annotation.CacheRedis;
 import com.example.javaee_ecomorder.common.config.EcomAopProperties;
 import com.example.javaee_ecomorder.common.utils.RedisCacheUtil;
 import org.aspectj.lang.ProceedingJoinPoint;

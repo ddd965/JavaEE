@@ -1,6 +1,6 @@
 package com.example.javaee_ecomorder.admin.aop;
 
-import com.example.javaee_ecomorder.admin.annotation.OperateLog;
+import com.example.javaee_ecomorder.common.annotation.OperateLog;
 import com.example.javaee_ecomorder.common.config.EcomAopProperties;
 import com.example.javaee_ecomorder.common.context.UserContext;
 import com.example.javaee_ecomorder.common.context.UserInfo;
