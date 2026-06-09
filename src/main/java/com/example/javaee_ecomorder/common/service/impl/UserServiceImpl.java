@@ -11,9 +11,9 @@ import com.example.javaee_ecomorder.common.exception.BusinessException;
 import com.example.javaee_ecomorder.common.mapper.LoginLogMapper;
 import com.example.javaee_ecomorder.common.mapper.UserMapper;
 import com.example.javaee_ecomorder.common.mapper.UserProfileMapper;
-import com.example.javaee_ecomorder.common.security.EcomPasswordEncoder;
 import com.example.javaee_ecomorder.common.service.UserService;
 import com.example.javaee_ecomorder.common.utils.PageResult;
+import com.example.javaee_ecomorder.common.utils.PasswordUtil;
 import com.example.javaee_ecomorder.common.vo.OrderVO;
 import com.example.javaee_ecomorder.common.vo.UserListVO;
 import com.example.javaee_ecomorder.common.vo.UserProfileVO;
@@ -41,8 +41,6 @@ public class UserServiceImpl implements UserService {
     private UserProfileMapper profileMapper;
     @Autowired
     private LoginLogMapper loginLogMapper;
-    @Autowired
-    private EcomPasswordEncoder passwordEncoder;
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
@@ -126,7 +124,7 @@ public class UserServiceImpl implements UserService {
         }
         User user = new User();
         BeanUtils.copyProperties(dto, user);
-        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setPassword(PasswordUtil.encode(dto.getPassword()));
         user.setCreateTime(new Date());
         user.setEnabled(true);
         user.setAccountNonLocked(true);
@@ -144,10 +142,10 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             throw new BusinessException("用户不存在");
         }
-        if (!passwordEncoder.matches(oldPwd, user.getPassword())) {
+        if (!PasswordUtil.matches(oldPwd, user.getPassword())) {
             throw new BusinessException("原密码错误");
         }
-        userMapper.updatePassword(userId, passwordEncoder.encode(newPwd));
+        userMapper.updatePassword(userId, PasswordUtil.encode(newPwd));
     }
 
     @Override
@@ -155,7 +153,7 @@ public class UserServiceImpl implements UserService {
         if (userMapper.selectUserWithProfile(userId) == null) {
             throw new BusinessException("用户不存在");
         }
-        userMapper.updatePassword(userId, passwordEncoder.encode(newPassword));
+        userMapper.updatePassword(userId, PasswordUtil.encode(newPassword));
     }
 
     @Override

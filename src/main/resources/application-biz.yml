@@ -14,11 +14,6 @@ spring:
       host: localhost
       port: 6379
       database: 0
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
-      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
-      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
 
 ecom:
   aop:
